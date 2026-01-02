@@ -244,7 +244,7 @@ end
 
 -- Adds a pet to the follow system (equips it)
 local function addPet(player, petInstance)
-	follow[player] = follow[player] or { pets = {} }
+	follow[player] = follow[player] or {pets = {}}
 	local pets = follow[player].pets
 
 	
