@@ -167,10 +167,6 @@ whendeleted.OnServerEvent:Connect(function(player, petDataToRemove)
 	local ok, updated = pcall(function()
 		return StatsDataStore:UpdateAsync(player.UserId, function(old)
 			old = normalize(old)
-
-			--This is the most crucial part maybe
-			--It loops through our table of tables and it checks if the thing they deleted was a certain name
-			--So it knows what to delete from the table that was saved
 			for i = #old, 1, -1 do
 				local v = old[i]
 				if v.Nickname == petDataToRemove.Nickname then
