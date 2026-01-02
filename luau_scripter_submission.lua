@@ -1,7 +1,7 @@
 local Pet = {} 
 local DataStoreService = game:GetService("DataStoreService")
 local runservice= game:GetService("RunService")
-local StatsDataStore = DataStoreService:GetDataStore("NewPets22")
+local StatsDataStore = DataStoreService:GetDataStore("NewPets25")
 local players= game:GetService("Players")
 --datastore service in order to save our players pets in the inventory and load them when they join
 Pet.__index = Pet
@@ -105,46 +105,6 @@ local spawnpet= remotes.SpawnPet
 local unequip= remotes.Unequip
 local maxEquippedmsg= remotes.MaxEquippedmsg
 
-players.PlayerAdded:Connect(function(player)
-	local InventoryGui= player.PlayerGui:WaitForChild("UI"):WaitForChild("InventoryGui")
-	local connection
-	connection= InventoryGui.TextButton.MouseButton1Click:Connect(function()
-	
-	--Gives a random pet
-		remotevent:FireClient(player, Pet:Roll())
-	
-	end)
-	
-	--LOADS IN YOUR PET DATA FROM LOOPING THROUGH A TABLE THAT HOLDS TABLES LABELED "v":
-	local ok, dataOrErr = pcall(function()
-		return StatsDataStore:GetAsync(player.UserId)
-	end)
-
-	if ok then
-		print("Inventory:", dataOrErr)
-		for _, v in ipairs(dataOrErr) do
-			loaddata:FireClient(player, v)
-		end
-	else
-		warn("No inventory table to load:", dataOrErr)
-	end
-
-	
-	
-end)
---Returns feedback when deleting or updating your inventory
-local function seeinventory(ok, newValueOrErr)
-	if ok then
-		local newValue = newValueOrErr
-		print("New inventory:", newValue) 
-
-	else
-		warn("Save failed:", newValueOrErr)
-	end
-end
-
---Table:
-
 local function normalize(old)
 	if type(old) ~= "table" then
 		return {}
@@ -152,47 +112,69 @@ local function normalize(old)
 	return old
 end
 
+players.PlayerAdded:Connect(function(player)
+	local InventoryGui= player.PlayerGui:WaitForChild("UI"):WaitForChild("InventoryGui")
+	local connection
+	connection= InventoryGui.TextButton.MouseButton1Click:Connect(function()
+
+		--Gives a random pet
+		remotevent:FireClient(player, Pet:Roll())
+
+	end)
+
+	--LOADS IN YOUR PET DATA FROM LOOPING THROUGH A TABLE THAT HOLDS TABLES LABELED "v":
+	local ok, dataOrErr = pcall(function()
+		return StatsDataStore:GetAsync(player.UserId)
+	end)
+
+	if ok then
+		dataOrErr = normalize(dataOrErr) -- turn nil into {} cuz a new player needs info at first
+		for _, v in ipairs(dataOrErr) do
+			loaddata:FireClient(player, v)
+		end
+
+	else
+		warn("No inventory table to load:", dataOrErr)
+	end
+end)
+
+--Returns feedback when deleting or updating your inventory
+local function seeinventory(ok, newValueOrErr)
+	if ok then
+		local newValue = newValueOrErr
+		print("New inventory:", newValue)
+	else
+		warn("Save failed:", newValueOrErr)
+	end
+end
 
 --AN EVENT THAT IS CAUGHT WHEN THE PLAYER ROLLS FOR A PET 
 remotevent.OnServerEvent:Connect(function(player, petData)
-	--Important it gives us a counter that is stored. Since you only can have 4 pets it will use this counter
-	local ok2, updated2 = pcall(function()
-		return StatsDataStore:IncrementAsync("Check", 1)
-	end)
-	seeinventory(ok2, updated2)
-	
-	
 	local ok, updated = pcall(function()
 		return StatsDataStore:UpdateAsync(player.UserId, function(old)
-			if updated2 >= 5 then return end --5 justs works because 4 events gives only 3 pets idk why
 			old = normalize(old)
+			if #old >= 4 then return old end
 			table.insert(old, petData)
-		
 			return old
 		end)
 	end)
 
 	seeinventory(ok, updated)
-	
 end)
 
 --Simple event that catches when a player deletes a pet
 whendeleted.OnServerEvent:Connect(function(player, petDataToRemove)
-	local ok3, updated3 = pcall(function()
-		return StatsDataStore:IncrementAsync("Check", - 1)
-	end)
-	--Back to our check it will minus one from the counter so if it was 4/4 then 3/4.. etc
 	local ok, updated = pcall(function()
 		return StatsDataStore:UpdateAsync(player.UserId, function(old)
 			old = normalize(old)
-		
-		--This is the most crucial part maybe
-		--It loops through our table of tables and it checks if the thing they deleted was a certain name
-		--So it knows what to delete from the table that was saved
-			for _, v in ipairs(old) do
-				if v.Nickname== petDataToRemove.Nickname then
-					local index = table.find(old, v)
-					table.remove(old, index)
+
+			--This is the most crucial part maybe
+			--It loops through our table of tables and it checks if the thing they deleted was a certain name
+			--So it knows what to delete from the table that was saved
+			for i = #old, 1, -1 do
+				local v = old[i]
+				if v.Nickname == petDataToRemove.Nickname then
+					table.remove(old, i)
 					break
 				end
 			end
@@ -201,8 +183,8 @@ whendeleted.OnServerEvent:Connect(function(player, petDataToRemove)
 	end)
 
 	seeinventory(ok, updated)
-	
 end)
+
 -- holds per-player follow data 
 local follow = {}
 
@@ -333,4 +315,3 @@ end)
 
 
 return Pet
-
