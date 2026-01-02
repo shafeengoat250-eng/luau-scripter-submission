@@ -223,7 +223,7 @@ local function ensureFollowLoop(player)
 				continue
 			end
 
-			-- AlignPosition/AlignOrientation are what actually “follow” the player
+			-- AlignPosition/AlignOrientation this malkes it so that it follows the player basically
 			local alignPos = pet:FindFirstChild("AlignPosition", true)
 			local alignOri = pet:FindFirstChild("AlignOrientation", true)
 
