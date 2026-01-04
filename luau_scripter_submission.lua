@@ -1,6 +1,6 @@
 -- AbilitySystem.server.lua
 -- Server ability system demo:
--- - Client only requests an ability name; server validates + executes (prevents client side cheating).
+-- - Client only requests an ability name server validates + executes (prevents cheating from client).
 -- - Shows CFrame math (dash direction), physics constraints (LinearVelocity), hit detection (OverlapParams / GetPartBoundsInBox),
 --   a Bezier projectile (math + RunService), and VFX debris (raycasts + Debris cleanup).
 -- Controls are handled by a separate client script which fires AbilityRequest.
