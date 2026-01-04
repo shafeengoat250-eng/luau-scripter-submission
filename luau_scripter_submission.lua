@@ -66,7 +66,7 @@ local ROCK_SIZE = Vector3.new(3,3,3)
 local ROCK_SPAWN_FORWARD_OFFSET = 1
 local ROCK_SPAWN_UP_OFFSET = 1
 
---// AbilityController (per-player state)
+-- AbilityController (per player state)
 -- Each player gets their own controller instance (metatable/OOP) so cooldown tracking stays isolated
 local AbilityController = {}
 AbilityController.__index = AbilityController
@@ -105,7 +105,7 @@ function AbilityController.startCooldown(self: AbilityControllerT, abilityName: 
 	end)
 end
 
---// Character helpers
+-- Character helpers
 -- accessors keep the ability logic readable to people and avoids instance lookups
 local function getCharacter(player: Player): Model
 	return player.Character
@@ -123,8 +123,8 @@ local function getRoot(character: Model): BasePart
 	return nil
 end
 
---// Hit detection helper
--- Uses OverlapParams + GetPartBoundsInBox to collect unique humanoids in a box region.
+--Hit detection helper
+-- Uses OverlapParams and GetPartBoundsInBox to collect humanoids in a box region
 local function getTargetsInBox(boxCFrame: CFrame, boxSize: Vector3, ignoreInstances: {Instance}): {Humanoid}
 	local params = OverlapParams.new()
 	params.FilterType = Enum.RaycastFilterType.Exclude
@@ -149,7 +149,7 @@ local function getTargetsInBox(boxCFrame: CFrame, boxSize: Vector3, ignoreInstan
 	return targets
 end
 
---// Combat helper
+-- Combat helper
 -- Knockback is applied by setting target root velocity away from the impact origin.
 local function applyKnockbackToHumanoid(humanoid: Humanoid, fromPosition: Vector3, strength: number)
 	local character = humanoid.Parent
