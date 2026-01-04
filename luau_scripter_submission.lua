@@ -1,313 +1,500 @@
-local Pet = {} 
-local DataStoreService = game:GetService("DataStoreService")
-local runservice= game:GetService("RunService")
-local StatsDataStore = DataStoreService:GetDataStore("NewPets25")
-local players= game:GetService("Players")
---datastore service in order to save our players pets in the inventory and load them when they join
-Pet.__index = Pet
-Pet.All_PlayerClasses = {}
+-- AbilitySystem.server.lua
+-- Server ability system demo:
+-- - Client only requests an ability name; server validates + executes (prevents client side cheating).
+-- - Shows CFrame math (dash direction), physics constraints (LinearVelocity), hit detection (OverlapParams / GetPartBoundsInBox),
+--   a Bezier projectile (math + RunService), and VFX debris (raycasts + Debris cleanup).
+-- Controls are handled by a separate client script which fires AbilityRequest.
 
---A pet data's values should be these:
-export type PetData = {
-	Nickname: string,
-	Rarity: string,
-	Power: number,
-	Level: number,
-	Chance: number
+--How to play, Q to dashstrike // E to shockwave // R to throw
+
+--// Services
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local Debris = game:GetService("Debris")
+
+--// Remotes
+local remotesFolder = ReplicatedStorage:WaitForChild("Remotes")
+local abilityRequest = remotesFolder:WaitForChild("AbilityRequest") :: RemoteEvent
+
+--// Ability definitions with their cooldowns
+local ABILITIES = {
+	DashStrike = {
+		cooldown = 1.5,
+	},
+
+	Shockwave= {
+		cooldown = 4,
+	},
+
+	ThrowRock = {
+		cooldown = 2.5,
+	},
 }
 
+--// DashStrike config
+-- A short forward dash followed by a single hitbox check in front of the player.
+local DASH_DISTANCE = 12
+local DASH_TIME = 0.12
+local HITBOX_SIZE = Vector3.new(15, 15, 15)
+local HITBOX_FORWARD_OFFSET = 5
+local DAMAGE = 20
+local KNOCKBACK = 400
 
-local pets:PetData = {
-	{Nickname = "Cat",   Rarity = "Common",    Power = 10,   Level = 1, Chance = 70}, 
-	{Nickname = "Bunny", Rarity = "Rare",      Power = 100,  Level = 1, Chance = 25},
-	{Nickname = "Fox",   Rarity = "Legendary", Power = 1000, Level = 1, Chance = 5},
+--// Shockwave config
+-- A shockwave effect that damages nearby humanoids and spawns outward-moving debris for visual impact
+local SHOCKWAVE_RADIUS = 14
+local SHOCKWAVE_HEIGHT = 6
+local SHOCKWAVE_DAMAGE = 30
+local SHOCKWAVE_KNOCKBACK = 125
+local DEBRIS_COUNT = 22
+local DEBRIS_RADIUS = 3
+local DEBRIS_SPREAD = 12
+local DEBRIS_LIFETIME = 1.2
+local DEBRIS_MIN_SIZE = 0.6
+local DEBRIS_MAX_SIZE = 1.6
+local DEBRIS_OUT_SPEED = 55
+local DEBRIS_UP_SPEED = 30
+
+--// ThrowRock (Bezier Curve) config
+-- Projectile with a quadratic Bezier curve
+local ROCK_RANGE = 17
+local ROCK_FLIGHT_TIME = 0.45
+local ROCK_ARC_HEIGHT = 14
+local ROCK_DAMAGE = 25
+local ROCK_KNOCKBACK = 90
+local ROCK_SIZE = Vector3.new(3,3,3)
+local ROCK_SPAWN_FORWARD_OFFSET = 1
+local ROCK_SPAWN_UP_OFFSET = 1
+
+--// AbilityController (per-player state)
+-- Each player gets their own controller instance (metatable/OOP) so cooldown tracking stays isolated
+local AbilityController = {}
+AbilityController.__index = AbilityController
+
+type AbilityControllerData = {
+	player: Player,
+	onCooldown: {[string]: boolean},
 }
---Changing chance doesnt do nothing its just there to represent the ui chance label 
---These chances are from the method petroll btw
-local MaxEquipped= 3
 
-function Pet.new(player)
-	local self = setmetatable({}, Pet) 
-	self.Petone= pets[1]
+export type AbilityControllerT = AbilityControllerData & {
+	isOnCooldown: (self: AbilityControllerT, abilityName: string) -> boolean,
+	startCooldown: (self: AbilityControllerT, abilityName: string, cooldownSeconds: number) -> (),
+	tryCast: (self: AbilityControllerT, abilityName: string) -> (),
+}
 
-	self.Petstwo= pets[2]
-	
-	self.Petsthree= pets[3]
-	
-	
-	Pet.All_PlayerClasses[player.UserId]= self
-	
-	return self
-end
-
---METHODS IN ORDER TO SET DIFFERENT CONFIGURATIONS TO THE TABLE:
-
-function Pet:Rename(newName: string, classname)
-	classname.Nickname = newName
-end
-
-function Pet:SetPower(newPower: number, classname)
-	classname.Power = newPower
-end
-
-function Pet:SetRarity(newRarity: string, classname)
-	classname.Rarity = newRarity
-end
-
-function Pet:SetLevel(newLevel: number, classname)
-	classname.Level = newLevel
-end
---DEFAULT STATS: YOU CAN CONFIGURE EACH USING THIS CONFIG METHOD
-function Pet:Config(Rename, Power, Rarity, Level, Index)
-	local configindex = {
-		self.Petone,
-		self.Petstwo,
-		self.Petsthree
+function AbilityController.new(player: Player): AbilityControllerT
+	local self: AbilityControllerData = {
+		player = player,
+		onCooldown = {},
 	}
 
-	local function configstats(name, power, rarity, lvl, index)
-		self:Rename(name, configindex[index])
-		self:SetPower(power, configindex[index])
-		self:SetRarity(rarity, configindex[index])
-		self:SetLevel(lvl, configindex[index])
-	end
-
-	configstats(Rename, Power, Rarity, Level, Index)
-end
---IF YOU WANT TO CHANGE STATS CALL THE CONFIG IN A SERVER SCRIPT, SUPER SIMPLE MAKE A NEW OBJECT AND CALL PET:CONFIG
-
---Simple way of managing the randomness between each pet
---Just uses simple checks with math.random
-function Pet:Roll()
-	local roll = math.random(1, 100)
-
-	local t
-	if roll <= 70 then -- 70%
-		
-		t = pets[1]
-		
-	elseif roll <= 95 then -- 25%
-		
-		t = pets[2]
-	else
-		
-		t = pets[3] -- 5%
-	end
-
-	return t
-end
---THIS IS THE START OF THE DATASTORES:
-local remotes= game.ReplicatedStorage.Remotes
-local remotevent= remotes.RemoteEvent
-local whendeleted= remotes.WhenDeleted
-local loaddata= remotes.WhenJoined
-local spawnpet= remotes.SpawnPet
-local unequip= remotes.Unequip
-local maxEquippedmsg= remotes.MaxEquippedmsg
-
-local function normalize(old)
-	if type(old) ~= "table" then
-		return {}
-	end
-	return old
+	return setmetatable(self:: any, AbilityController) :: any
 end
 
-players.PlayerAdded:Connect(function(player)
-	local InventoryGui= player.PlayerGui:WaitForChild("UI"):WaitForChild("InventoryGui")
-	local connection
-	connection= InventoryGui.TextButton.MouseButton1Click:Connect(function()
+function AbilityController.isOnCooldown(self: AbilityControllerT, abilityName: string): boolean
+	return self.onCooldown[abilityName] == true
+end
 
-		--Gives a random pet
-		remotevent:FireClient(player, Pet:Roll())
+function AbilityController.startCooldown(self: AbilityControllerT, abilityName: string, cooldownSeconds: number)
+	-- Boolean cooldowns keep the system simple and prevent spamming
+	self.onCooldown[abilityName] = true
 
+	task.spawn(function()
+		task.wait(cooldownSeconds)
+		self.onCooldown[abilityName] = false
 	end)
+end
 
-	--LOADS IN YOUR PET DATA FROM LOOPING THROUGH A TABLE THAT HOLDS TABLES LABELED "v":
-	local ok, dataOrErr = pcall(function()
-		return StatsDataStore:GetAsync(player.UserId)
+--// Character helpers
+-- accessors keep the ability logic readable to people and avoids instance lookups
+local function getCharacter(player: Player): Model
+	return player.Character
+end
+
+local function getHumanoid(character: Model): Humanoid
+	return character:FindFirstChildOfClass("Humanoid")
+end
+
+local function getRoot(character: Model): BasePart
+	local root = character:FindFirstChild("HumanoidRootPart")
+	if root and root:IsA("BasePart") then
+		return root
+	end
+	return nil
+end
+
+--// Hit detection helper
+-- Uses OverlapParams + GetPartBoundsInBox to collect unique humanoids in a box region.
+local function getTargetsInBox(boxCFrame: CFrame, boxSize: Vector3, ignoreInstances: {Instance}): {Humanoid}
+	local params = OverlapParams.new()
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	params.FilterDescendantsInstances = ignoreInstances
+
+	local parts = workspace:GetPartBoundsInBox(boxCFrame, boxSize, params)
+
+	local seen: {[Humanoid]: boolean} = {}
+	local targets: {Humanoid} = {}
+
+	for _, part in ipairs(parts) do
+		local model = part:FindFirstAncestorOfClass("Model")
+		if model then
+			local humanoid = model:FindFirstChildOfClass("Humanoid")
+			if humanoid and humanoid.Health > 0 and not seen[humanoid] then
+				seen[humanoid] = true
+				table.insert(targets, humanoid)
+			end
+		end
+	end
+
+	return targets
+end
+
+--// Combat helper
+-- Knockback is applied by setting target root velocity away from the impact origin.
+local function applyKnockbackToHumanoid(humanoid: Humanoid, fromPosition: Vector3, strength: number)
+	local character = humanoid.Parent
+	if not character or not character:IsA("Model") then
+		return
+	end
+
+	local root = getRoot(character)
+	if not root then
+		return
+	end
+
+	local delta = root.Position - fromPosition
+	local horizontal = Vector3.new(delta.X, 0, delta.Z)
+
+	if horizontal.Magnitude < 0.001 then
+		horizontal = Vector3.new(0, 0, -1)
+	end
+
+	root.AssemblyLinearVelocity = Vector3.new(
+		horizontal.Unit.X * strength,
+		root.AssemblyLinearVelocity.Y + 12,
+		horizontal.Unit.Z * strength
+	)
+end
+
+--// Movement helper (DashStrike)
+-- Uses LinearVelocity
+local function dashWithLinearVelocity(root: BasePart, direction: Vector3, speed: number, duration: number)
+	if direction.Magnitude < 0.001 then
+		return
+	end
+
+	local att = root:FindFirstChild("DashAttachment")
+	if not att then
+		att = Instance.new("Attachment")
+		att.Name = "DashAttachment"
+		att.Parent = root
+	end
+
+	local lv = Instance.new("LinearVelocity")
+	lv.Name = "DashLinearVelocity"
+	lv.Attachment0 = att
+	lv.RelativeTo = Enum.ActuatorRelativeTo.World
+	lv.MaxForce = math.huge
+	lv.VectorVelocity = direction.Unit * speed
+	lv.Parent = root
+
+	task.spawn(function()
+		task.wait(duration)
+		if lv.Parent then
+			lv:Destroy()
+		end
 	end)
+end
 
-	if ok then
-		dataOrErr = normalize(dataOrErr) -- turn nil into {} cuz a new player needs info at first
-		for _, v in ipairs(dataOrErr) do
-			loaddata:FireClient(player, v)
+--// ThrowRock helpers (Bezier + anti-tunneling raycasts)
+-- Quadratic Bezier gives a clean arc using only Vector3 math (no physics simulation NEEDED)
+local function bezierQuadratic(p0: Vector3, p1: Vector3, p2: Vector3, t: number): Vector3
+	local a = p0:Lerp(p1, t)
+	local b = p1:Lerp(p2, t)
+	return a:Lerp(b, t)
+end
+
+local function spawnRockBezier(ownerCharacter: Model, startPos: Vector3, direction: Vector3)
+	local rock = Instance.new("Part")
+	rock.Name = "RockProjectile"
+	rock.Shape = Enum.PartType.Ball
+	rock.Size = ROCK_SIZE
+	rock.CanCollide = false
+	rock.Anchored = true
+	rock.CanQuery = true
+	rock.CanTouch = false
+	rock.Material = Enum.Material.Slate
+	rock.Position = startPos
+	rock.Parent = workspace
+
+	local dir = direction.Unit
+	local endPos = startPos + (dir * ROCK_RANGE)
+	local control = (startPos + endPos) * 0.5 + Vector3.new(0, ROCK_ARC_HEIGHT, 0)
+
+	local rayParams = RaycastParams.new()
+	rayParams.FilterType = Enum.RaycastFilterType.Exclude
+	rayParams.FilterDescendantsInstances = {ownerCharacter, rock }
+
+	local t = 0
+	local lastPos = startPos
+	local hit = false
+	local conn
+
+	conn = RunService.Heartbeat:Connect(function(dt: number)
+		if hit then
+			return
 		end
 
-	else
-		warn("No inventory table to load:", dataOrErr)
-	end
-end)
+		t += dt / ROCK_FLIGHT_TIME
+		if t >= 1 then
+			t = 1
+		end
 
---Returns feedback when deleting or updating your inventory
-local function seeinventory(ok, newValueOrErr)
-	if ok then
-		local newValue = newValueOrErr
-		print("New inventory:", newValue)
-	else
-		warn("Save failed:", newValueOrErr)
-	end
-end
+		local pos = bezierQuadratic(startPos, control, endPos, t)
+		local step = pos - lastPos
 
---AN EVENT THAT IS CAUGHT WHEN THE PLAYER ROLLS FOR A PET 
-remotevent.OnServerEvent:Connect(function(player, petData)
-	local ok, updated = pcall(function()
-		return StatsDataStore:UpdateAsync(player.UserId, function(old)
-			old = normalize(old)
-			if #old >= 4 then return old end
-			table.insert(old, petData)
-			return old
-		end)
-	end)
-
-	seeinventory(ok, updated)
-end)
-
---Simple event that catches when a player deletes a pet
-whendeleted.OnServerEvent:Connect(function(player, petDataToRemove)
-	local ok, updated = pcall(function()
-		return StatsDataStore:UpdateAsync(player.UserId, function(old)
-			old = normalize(old)
-			for i = #old, 1, -1 do
-				local v = old[i]
-				if v.Nickname == petDataToRemove.Nickname then
-					table.remove(old, i)
-					break
+		-- Raycast between frames so fast projectiles still register hits
+		if step.Magnitude > 0 then
+			local result = game.Workspace:Raycast(lastPos, step, rayParams)
+			if result then
+				local model = result.Instance:FindFirstAncestorOfClass("Model")
+				if model then
+					local humanoid = model:FindFirstChildOfClass("Humanoid")
+					if humanoid and humanoid.Health > 0 then
+						hit = true
+						humanoid:TakeDamage(ROCK_DAMAGE)
+						applyKnockbackToHumanoid(humanoid, rock.Position, ROCK_KNOCKBACK)
+					end
 				end
+
+				if conn then conn:Disconnect() end
+				if rock.Parent then rock:Destroy() end
+				return
 			end
-			return old
+		end
+
+		rock.Position = pos
+
+		-- You can easily change this it orentates based on where your facing.
+		if step.Magnitude > 0.001 then
+			rock.CFrame = CFrame.lookAt(pos, pos + step.Unit)
+		end
+
+		lastPos = pos
+
+		if t >= 1 then
+			if conn then conn:Disconnect() end
+			if rock.Parent then rock:Destroy() end
+		end
+	end)
+end
+
+--// Shockwave VFX helper
+-- Spawns small debris chunks sampled from the ground material/color and pushes them outward.
+local function spawnShockwaveDebris(origin: Vector3, ignore: {Instance})
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	params.FilterDescendantsInstances = ignore
+
+	for i = 1, DEBRIS_COUNT do
+		local angle = (i / DEBRIS_COUNT) * math.pi * 2
+		local ringOffset = Vector3.new(math.cos(angle), 0, math.sin(angle)) * DEBRIS_RADIUS
+		local randomOffset = Vector3.new(
+			(math.random() - 0.5) * 2,
+			0,
+			(math.random() - 0.5) * 2
+		) * (DEBRIS_SPREAD * 0.15)
+
+		local start = origin + ringOffset + randomOffset + Vector3.new(0, 8, 0)
+		local result = game.Workspace:Raycast(start, Vector3.new(0, -40, 0), params)
+		if not result then
+			continue
+		end
+
+		local hitPos = result.Position
+		local hitNormal = result.Normal
+		local hitPart = result.Instance
+
+		local size = math.random() * (DEBRIS_MAX_SIZE - DEBRIS_MIN_SIZE) + DEBRIS_MIN_SIZE
+
+		local rock = Instance.new("Part")
+		rock.Name = "ShockwaveDebris"
+		rock.Size = Vector3.new(size, size, size)
+		rock.CanCollide = false
+		rock.CanQuery = false
+		rock.CanTouch = false
+		rock.Anchored = false
+		
+		if hitPart:IsA("BasePart") then
+			rock.Material = hitPart.Material
+			rock.Color = hitPart.Color
+		else
+			rock.Material = Enum.Material.Slate
+			rock.Color = Color3.fromRGB(120, 120, 120)
+		end
+		rock.CFrame = CFrame.lookAt(hitPos + hitNormal * (size * 0.5), hitPos + hitNormal) * CFrame.Angles(
+			math.rad(math.random(0, 360)),
+			math.rad(math.random(0, 360)),
+			math.rad(math.random(0, 360))
+		)
+		rock.Parent = workspace
+
+		local outward = (Vector3.new(rock.Position.X, origin.Y, rock.Position.Z) - Vector3.new(origin.X, origin.Y, origin.Z))
+		if outward.Magnitude < 0.001 then
+			outward = Vector3.new(1, 0, 0)
+		end
+
+		local att = Instance.new("Attachment")
+		att.Parent = rock
+
+		local lv = Instance.new("LinearVelocity")
+		lv.Attachment0 = att
+		lv.RelativeTo = Enum.ActuatorRelativeTo.World
+		lv.MaxForce = math.huge
+		lv.VectorVelocity = outward.Unit * DEBRIS_OUT_SPEED + Vector3.new(0, DEBRIS_UP_SPEED, 0)
+		lv.Parent = rock
+
+		task.spawn(function()
+			task.wait(0.15)
+			if lv.Parent then
+				lv:Destroy()
+			end
 		end)
-	end)
 
-	seeinventory(ok, updated)
-end)
+		-- Debris service cleans up temporary vfx parts automatically
+		Debris:AddItem(rock, DEBRIS_LIFETIME)
+	end
+end
 
--- holds per-player follow data 
-local follow = {}
+function AbilityController.tryCast(self: AbilityControllerT, abilityName: string)
+	local def = ABILITIES[abilityName]
+	if def == nil then
+		warn(("Unknown '%s' from %s"):format(abilityName, self.player.Name))
+		return
+	end
 
--- how far behind the pet is from the player
-local followdistance = 6
+	-- Cooldown check is always serverside; client requests are treated as untrusted.
+	if AbilityController.isOnCooldown(self, abilityName) then
+		return
+	end
 
--- GAP between pets
-local spacing = 6
+	if abilityName == "DashStrike" then
+		local character = getCharacter(self.player)
+		if not character then
+			return
+		end
 
---self explantory
-local maxpetlimit = 2
+		local humanoid = getHumanoid(character)
+		local root = getRoot(character)
+		if not humanoid or not root then
+			return
+		end
 
--- DOES ONLY WANT FOLLOW LOOP PER PLAYER SO THAT WE DONT USE MULTIPLE STEPPED CONNECTIONS
-local function ensureFollowLoop(player)
-	-- EASY CHECK THATS STOP THE FUNCTION IF THEY MADE A LOOP FOR A PLAYER ALREADY
-	if follow[player] and follow[player].conn then return end
+		if humanoid.Health <= 0 then
+			return
+		end
 
-	-- Create the player entry if it doesn’t exist yet
-	follow[player] = follow[player] or {pets = {}}
+		local forward = root.CFrame.LookVector
+		dashWithLinearVelocity(root, forward, DASH_DISTANCE / DASH_TIME, DASH_TIME)
 
+		task.spawn(function()
+			task.wait(0.05)
 
-	follow[player].conn = runservice.Stepped:Connect(function()
-		local char = player.Character
-		local hrp = char:WaitForChild("HumanoidRootPart") 
+			local hitboxCFrame = root.CFrame + (root.CFrame.LookVector * HITBOX_FORWARD_OFFSET)
+			local targets = getTargetsInBox(hitboxCFrame, HITBOX_SIZE, { character })
 
-		local pets = follow[player].pets
-		local total = #pets
-		if total == 0 then return end -- nothing to update
-
-		-- center index used to make spacing symmetrical (ex: 2 pets left and right)
-		local center = (total + 1) / 2
-
-		-- loops backwards so it safely remove wrong pets while iterating
-		for i = total, 1, -1 do
-			local pet = pets[i]
-
-			-- If the pet got deleted or unparented, remove it from the list
-			if not pet.Parent then
-				table.remove(pets, i)
-				continue
+			for _, targetHumanoid in ipairs(targets) do
+				targetHumanoid:TakeDamage(DAMAGE)
+				applyKnockbackToHumanoid(targetHumanoid, root.Position, KNOCKBACK)
 			end
+		end)
+	end
 
-			-- AlignPosition/AlignOrientation this malkes it so that it follows the player basically
-			local alignPos = pet:FindFirstChild("AlignPosition", true)
-			local alignOri = pet:FindFirstChild("AlignOrientation", true)
-
-			-- this is the most tuff equation for offset omg
-			local sideOffset = (i - center) * spacing
-
-			-- behind the player and the sideways offset thing
-			alignPos.Position =
-				hrp.Position
-				+ (hrp.CFrame.LookVector * -followdistance)
-				+ (hrp.CFrame.RightVector * sideOffset)
-
-			-- Rotation: match player facing direction
-			alignOri.CFrame = hrp.CFrame
+	if abilityName == "Shockwave" then
+		local character = getCharacter(self.player)
+		if not character then
+			return
 		end
-	end)
-end
 
--- Adds a pet to the follow system (equips it)
-local function addPet(player, petInstance)
-	follow[player] = follow[player] or {pets = {}}
-	local pets = follow[player].pets
+		local humanoid = getHumanoid(character)
+		local root = getRoot(character)
+		if not humanoid or not root then
+			return
+		end
 
-	
-	if #pets >= maxpetlimit then
-		maxEquippedmsg:FireClient(player) -- tell client they hit the cap
-		petInstance:Destroy()             -- delete the new pet that tried to equip
-		return false
+		if humanoid.Health <= 0 then
+			return
+		end
+
+		local boxSize = Vector3.new(SHOCKWAVE_RADIUS * 2, SHOCKWAVE_HEIGHT, SHOCKWAVE_RADIUS * 2)
+		local boxCFrame = CFrame.new(root.Position)
+
+		local targets = getTargetsInBox(boxCFrame, boxSize, { character })
+
+		for _, targetHumanoid in ipairs(targets) do
+			targetHumanoid:TakeDamage(SHOCKWAVE_DAMAGE)
+			applyKnockbackToHumanoid(targetHumanoid, root.Position, SHOCKWAVE_KNOCKBACK)
+		end
+
+		spawnShockwaveDebris(root.Position, { character })
 	end
 
-	-- Store pet so it gets updated each frame
-	table.insert(pets, petInstance)
+	if abilityName == "ThrowRock" then
+		local character = getCharacter(self.player)
+		if not character then
+			return
+		end
 
-	-- Ensure the follow loop is running for this player
-	ensureFollowLoop(player)
-	return true
-end
+		local humanoid = getHumanoid(character)
+		local root = getRoot(character)
+		if not humanoid or not root then
+			return
+		end
 
--- Removes a pet from the follow system (unequips it)
-local function removePet(player, petInstance)
-	local t = follow[player]
-	local pets = t.pets
+		if humanoid.Health <= 0 then
+			return
+		end
 
-	-- Remove from list so it stops being updated
-	local i = table.find(pets, petInstance)
-	table.remove(pets, i)
+		local dir = root.CFrame.LookVector
+		local spawnPos =
+			root.Position
+			+ (dir * ROCK_SPAWN_FORWARD_OFFSET)
+			+ Vector3.new(0, ROCK_SPAWN_UP_OFFSET, 0)
 
-	-- Destroy the pet in the world
-	if petInstance and petInstance.Parent then
-		petInstance:Destroy()
+		spawnRockBezier(character, spawnPos, dir)
 	end
 
-	-- If no pets left, disconnects and makes it nil
-	-- i remeber learning online that making it nil saves memory so thats that
-	if #pets == 0 and t.conn then
-		t.conn:Disconnect()
-		t.conn = nil
-	end
+	AbilityController.startCooldown(self, abilityName, def.cooldown)
 end
 
+--// Controllers storage
+-- Stored by Player so we can keep per player state without putting state on Instances.
+local controllers: {[Player]: AbilityControllerT} = {}
 
-spawnpet.OnServerEvent:Connect(function(player, petdata)
-	local template = game.ReplicatedStorage.Pets.Part
-	local pet = template:Clone()
-	pet.Parent = player.Character
+local function getController(player: Player): AbilityControllerT
+	local controller = controllers[player]
+	if controller == nil then
+		controller = AbilityController.new(player)
+		controllers[player] = controller
+	end
+	return controller
+end
 
-	pet.SurfaceGui.TextLabel.Text = petdata.Nickname
-	pet:SetAttribute("Nickname", petdata.Nickname)
-
-	addPet(player, pet)
+Players.PlayerRemoving:Connect(function(player: Player)
+	-- I use the event to clean up memory leaks
+	controllers[player] = nil
 end)
 
-unequip.OnServerEvent:Connect(function(player, petdata)
-	local t = follow[player]
-
-	-- The equipped pet that matches the nickname then remove it
-	for _, pet in ipairs(t.pets) do
-		if pet:GetAttribute("Nickname") == petdata.Nickname then
-			removePet(player, pet)
-			break
-		end
+abilityRequest.OnServerEvent:Connect(function(player: Player, abilityName: any)
+	-- Treating the remote input as untrusted validate types before indexing tables or calling methods.
+	if typeof(abilityName) ~= "string" then
+		return
 	end
+
+	local controller = getController(player)
+	controller:tryCast(abilityName)
 end)
 
 
 
-return Pet
