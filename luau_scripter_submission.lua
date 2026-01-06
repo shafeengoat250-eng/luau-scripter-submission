@@ -1,6 +1,6 @@
 -- AbilitySystem.server.lua
 -- Server ability system:
--- - Client only requests an ability name server validates and executes (prevents cheating from client).
+-- - client only requests an ability name.
 -- - Shows CFrame math
 --   Uses BEZIER formula for a projectile
 -- Controls are handled by a separate client script which fires AbilityRequest
