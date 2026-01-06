@@ -1,3 +1,4 @@
+--!strict
 -- AbilitySystem.server.lua
 -- Server ability system:
 -- - client only requests an ability name.
