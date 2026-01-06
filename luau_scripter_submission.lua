@@ -55,7 +55,7 @@ local DEBRIS_MAX_SIZE = 1.6
 local DEBRIS_OUT_SPEED = 55
 local DEBRIS_UP_SPEED = 30
 
---// Rock Throw (Bezier Curve) config
+--Rock Throw (Bezier Curve) config
 -- Projectile with a quadratic Bezier curve
 local ROCK_RANGE = 17
 local ROCK_FLIGHT_TIME = 0.45
@@ -176,7 +176,7 @@ local function applyKnockbackToHumanoid(humanoid: Humanoid, fromPosition: Vector
 	)
 end
 
---// Movement helper (DashStrike)
+--Movement helper (DashStrike)
 -- Uses LinearVelocity
 local function dashWithLinearVelocity(root: BasePart, direction: Vector3, speed: number, duration: number)
 	if direction.Magnitude < 0.001 then
@@ -206,7 +206,7 @@ local function dashWithLinearVelocity(root: BasePart, direction: Vector3, speed:
 	end)
 end
 
---// ThrowRock helpers (Bezier and anti-tunneling raycasts)
+--ThrowRock helpers (Bezier and anti-tunneling raycasts)
 -- Quadratic Bezier gives a clean arc using only Vector3 math (no physics simulation NEEDED)
 local function bezierQuadratic(p0: Vector3, p1: Vector3, p2: Vector3, t: number): Vector3
 	local a = p0:Lerp(p1, t)
@@ -289,7 +289,7 @@ local function spawnRockBezier(ownerCharacter: Model, startPos: Vector3, directi
 	end)
 end
 
---// Shockwave VFX helper
+-- Shockwave VFX helper
 -- Spawns small debris chunks from the ground material/color and pushes them outward.
 local function spawnShockwaveDebris(origin: Vector3, ignore: {Instance})
 	local params = RaycastParams.new()
@@ -467,7 +467,7 @@ function AbilityController.tryCast(self: AbilityControllerT, abilityName: string
 	AbilityController.startCooldown(self, abilityName, def.cooldown)
 end
 
---// Controllers storage
+-- Controllers storage
 -- Stored by Player so we can keep per player state 
 local controllers: {[Player]: AbilityControllerT} = {}
 
