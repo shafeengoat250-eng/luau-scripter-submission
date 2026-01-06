@@ -1,9 +1,9 @@
 -- AbilitySystem.server.lua
 -- Server ability system demo:
--- - Client only requests an ability name server validates + executes (prevents cheating from client).
--- - Shows CFrame math (dash direction), physics constraints (LinearVelocity), hit detection (OverlapParams / GetPartBoundsInBox),
---   a Bezier projectile (math + RunService), and VFX debris (raycasts + Debris cleanup).
--- Controls are handled by a separate client script which fires AbilityRequest.
+-- - Client only requests an ability name server validates and executes (prevents cheating from client).
+-- - Shows CFrame math
+--   a Bezier projectile.
+-- Controls are handled by a separate client script which fires AbilityRequest
 --How to play, Q to dashstrike // E to shockwave // R to throw
 
 --// Services
@@ -12,11 +12,11 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local Debris = game:GetService("Debris")
 
---// Remotes
+--// Remotes events from client
 local remotesFolder = ReplicatedStorage:WaitForChild("Remotes")
 local abilityRequest = remotesFolder:WaitForChild("AbilityRequest") :: RemoteEvent
 
---// Ability definitions with their cooldowns
+--// Abilites with their cooldowns
 local ABILITIES = {
 	DashStrike = {
 		cooldown = 1.5,
@@ -32,7 +32,7 @@ local ABILITIES = {
 }
 
 --// DashStrike config
--- A short forward dash followed by a single hitbox check in front of the player.
+-- a dash forward and it hit the person with damage and knockback
 local DASH_DISTANCE = 12
 local DASH_TIME = 0.12
 local HITBOX_SIZE = Vector3.new(15, 15, 15)
@@ -41,7 +41,7 @@ local DAMAGE = 20
 local KNOCKBACK = 400
 
 --// Shockwave config
--- A shockwave effect that damages nearby humanoids and spawns outward-moving debris for visual impact
+-- a shockwave that makes the player get knockback with a radius and a VFX effect. (Debris spreading out)
 local SHOCKWAVE_RADIUS = 14
 local SHOCKWAVE_HEIGHT = 6
 local SHOCKWAVE_DAMAGE = 30
@@ -55,7 +55,7 @@ local DEBRIS_MAX_SIZE = 1.6
 local DEBRIS_OUT_SPEED = 55
 local DEBRIS_UP_SPEED = 30
 
---// ThrowRock (Bezier Curve) config
+--// Rock Throw (Bezier Curve) config
 -- Projectile with a quadratic Bezier curve
 local ROCK_RANGE = 17
 local ROCK_FLIGHT_TIME = 0.45
@@ -67,7 +67,7 @@ local ROCK_SPAWN_FORWARD_OFFSET = 1
 local ROCK_SPAWN_UP_OFFSET = 1
 
 -- AbilityController (per player state)
--- Each player gets their own controller instance (metatable/OOP) so cooldown tracking stays isolated
+-- Each player gets their own controller instance metatable/OOP
 local AbilityController = {}
 AbilityController.__index = AbilityController
 
@@ -150,7 +150,7 @@ local function getTargetsInBox(boxCFrame: CFrame, boxSize: Vector3, ignoreInstan
 end
 
 -- Combat helper
--- Knockback is applied by setting target root velocity away from the impact origin.
+-- Knockback is applied by setting target root velocity away from the impact
 local function applyKnockbackToHumanoid(humanoid: Humanoid, fromPosition: Vector3, strength: number)
 	local character = humanoid.Parent
 	if not character or not character:IsA("Model") then
@@ -206,7 +206,7 @@ local function dashWithLinearVelocity(root: BasePart, direction: Vector3, speed:
 	end)
 end
 
---// ThrowRock helpers (Bezier + anti-tunneling raycasts)
+--// ThrowRock helpers (Bezier and anti-tunneling raycasts)
 -- Quadratic Bezier gives a clean arc using only Vector3 math (no physics simulation NEEDED)
 local function bezierQuadratic(p0: Vector3, p1: Vector3, p2: Vector3, t: number): Vector3
 	local a = p0:Lerp(p1, t)
@@ -290,7 +290,7 @@ local function spawnRockBezier(ownerCharacter: Model, startPos: Vector3, directi
 end
 
 --// Shockwave VFX helper
--- Spawns small debris chunks sampled from the ground material/color and pushes them outward.
+-- Spawns small debris chunks from the ground material/color and pushes them outward.
 local function spawnShockwaveDebris(origin: Vector3, ignore: {Instance})
 	local params = RaycastParams.new()
 	params.FilterType = Enum.RaycastFilterType.Exclude
@@ -361,7 +361,7 @@ local function spawnShockwaveDebris(origin: Vector3, ignore: {Instance})
 			end
 		end)
 
-		-- Debris service cleans up temporary vfx parts automatically
+		-- debris service cleans up temporary vfx parts automatically
 		Debris:AddItem(rock, DEBRIS_LIFETIME)
 	end
 end
@@ -373,7 +373,7 @@ function AbilityController.tryCast(self: AbilityControllerT, abilityName: string
 		return
 	end
 
-	-- Cooldown check is always serverside; client requests are treated as untrusted.
+	-- Cooldown check serverside
 	if AbilityController.isOnCooldown(self, abilityName) then
 		return
 	end
@@ -468,7 +468,7 @@ function AbilityController.tryCast(self: AbilityControllerT, abilityName: string
 end
 
 --// Controllers storage
--- Stored by Player so we can keep per player state without putting state on Instances.
+-- Stored by Player so we can keep per player state 
 local controllers: {[Player]: AbilityControllerT} = {}
 
 local function getController(player: Player): AbilityControllerT
@@ -486,7 +486,6 @@ Players.PlayerRemoving:Connect(function(player: Player)
 end)
 
 abilityRequest.OnServerEvent:Connect(function(player: Player, abilityName: any)
-	-- Treating the remote input as untrusted validate types before indexing tables or calling methods.
 	if typeof(abilityName) ~= "string" then
 		return
 	end
