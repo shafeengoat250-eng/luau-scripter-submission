@@ -1,5 +1,5 @@
 -- AbilitySystem.server.lua
--- Server ability system demo:
+-- Server ability system:
 -- - Client only requests an ability name server validates and executes (prevents cheating from client).
 -- - Shows CFrame math
 --   Uses BEZIER formula for a projectile
