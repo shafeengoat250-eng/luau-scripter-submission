@@ -2,7 +2,7 @@
 -- Server ability system demo:
 -- - Client only requests an ability name server validates and executes (prevents cheating from client).
 -- - Shows CFrame math
---   a Bezier projectile.
+--   Uses BEZIER formula for a projectile
 -- Controls are handled by a separate client script which fires AbilityRequest
 --How to play, Q to dashstrike // E to shockwave // R to throw
 
