@@ -4,19 +4,19 @@
 -- - Shows CFrame math
 --   Uses BEZIER formula for a projectile
 -- Controls are handled by a separate client script which fires AbilityRequest
---How to play, Q to dashstrike // E to shockwave // R to throw
+--How to play, Q to dashstrike E to shockwave R to throw
 
---// Services
+-- Services
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local Debris = game:GetService("Debris")
 
---// Remotes events from client
+-- Remotes events from client
 local remotesFolder = ReplicatedStorage:WaitForChild("Remotes")
 local abilityRequest = remotesFolder:WaitForChild("AbilityRequest") :: RemoteEvent
 
---// Abilites with their cooldowns
+-- Abilites with their cooldowns
 local ABILITIES = {
 	DashStrike = {
 		cooldown = 1.5,
@@ -31,7 +31,7 @@ local ABILITIES = {
 	},
 }
 
---// Dash into a strike config
+-- Dash into a strike config
 -- a dash forward and it hit the person with damage and knockback
 local DASH_DISTANCE = 12
 local DASH_TIME = 0.12
@@ -40,7 +40,7 @@ local HITBOX_FORWARD_OFFSET = 5
 local DAMAGE = 20
 local KNOCKBACK = 400
 
---// Shockwave config
+-- Shockwave config
 -- a shockwave that makes the player get knockback with a radius and a VFX effect. (Debris spreading out)
 local SHOCKWAVE_RADIUS = 14
 local SHOCKWAVE_HEIGHT = 6
