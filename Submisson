@@ -1,0 +1,347 @@
+def courtyard(items, coins):
+    print("You step into a windy castle courtyard.")
+    print("A stone Gardener stands beside a dry fountain. It does not move.")
+    print("What would you like to do?")
+    print("a. Go to the Kitchen")
+    print("b. Go to the Armory")
+    print("c. Pick an apple from the twisted tree")
+    print("d. Inspect the fountain")
+    print("e. Approach the Tower gate")
+
+    while True:
+
+        choice = input("Choose a, b, c, d, e, or check items: ")
+
+        if choice == "a":
+            kitchen(items, coins)
+            return
+
+        elif choice == "b":
+            armory(items, coins)
+            return
+
+        elif choice == "c":
+            if "apple" in items:
+                print("You already picked the only decent apple.")
+            else:
+                print("You reach up and grab a cold, shiny apple.")
+                print("You took an apple!")
+                items.append("apple")
+
+        elif choice == "d":
+            if "fountain coin" in coins:
+                print("The fountain is empty now. Just dust and old wishes.")
+            else:
+                print("You brush away leaves inside the fountain.")
+                print("Something clinks against stone.")
+                print("You found a coin!")
+                coins.append("fountain coin")
+
+        elif choice == "e":
+            if "royal seal" in items:
+                tower(items, coins)
+                return
+            else:
+                print("The Tower gate is sealed by a glowing mark.")
+                print("The stone Gardener seems to be staring at your hands...")
+
+        elif choice == "check" or choice == "check items":
+            if len(items) > 0:
+                print(f"You have: {items}")
+            else:
+                print("You have no items.")
+            print(f"Coins: {len(coins)}")
+
+        else:
+            print("Please choose a, b, c, d, e, or check items.")
+
+
+def kitchen(items, coins):
+    print("You enter the Kitchen. The air smells like smoke that never leaves.")
+    print("A Chef Ghost floats near a cold oven, stirring an empty pot.")
+    print("What would you like to do?")
+    print("a. Open the cupboards")
+    print("b. Talk to the Chef Ghost")
+    print("c. Return to the Courtyard")
+    print("d. Lift the trapdoor (to the Cellar)")
+
+    while True:
+
+        choice = input("Choose a, b, c, d, or check items: ")
+
+        if choice == "a":
+            if "wooden spoon" in items:
+                print("The cupboards are mostly bare now.")
+            else:
+                print("You pull open a squeaky cupboard.")
+                print("A wooden spoon falls into your hand.")
+                print("You took a wooden spoon!")
+                items.append("wooden spoon")
+
+        elif choice == "b":
+            if "silver key" in items:
+                print("The Chef Ghost points at the trapdoor and sighs.")
+                print("'No more deals. I already gave you what you needed.'")
+            else:
+                if "apple" in items:
+                    print("The Chef Ghost sniffs the air.")
+                    print("'An apple... I remember apples.'")
+                    print("It takes the apple without touching it.")
+                    print("A silver key drops onto the table.")
+                    print("You received a silver key!")
+                    items.append("silver key")
+                else:
+                    print("The Chef Ghost whispers: 'Bring me something fresh.'")
+                    print("It stares at the oven like it expects you to understand.")
+
+        elif choice == "c":
+            courtyard(items, coins)
+            return
+
+        elif choice == "d":
+            cellar(items, coins)
+            return
+
+        elif choice == "check" or choice == "check items":
+            if len(items) > 0:
+                print(f"You have: {items}")
+            else:
+                print("You have no items.")
+            print(f"Coins: {len(coins)}")
+
+        else:
+            print("Please choose a, b, c, d, or check items.")
+
+
+def armory(items, coins):
+    print("You enter the Armory. Rust flakes drift like red snow.")
+    print("A Rusty Knight stands motionless by a weapons rack.")
+    print("What would you like to do?")
+    print("a. Check the weapons rack")
+    print("b. Try the locked locker")
+    print("c. Speak to the Rusty Knight")
+    print("d. Return to the Courtyard")
+    print("e. Climb the side stair (toward the Tower)")
+
+    while True:
+
+        choice = input("Choose a, b, c, d, e, or check items: ")
+
+        if choice == "a":
+            if "shield" in items:
+                print("Most weapons crumble when you touch them.")
+                print("Your shield is the only thing that held together.")
+            else:
+                print("You tug a shield free from the rack.")
+                print("It is heavy, but solid.")
+                print("You took a shield!")
+                items.append("shield")
+
+        elif choice == "b":
+            if "royal seal" in items:
+                print("The locker is already open. It's empty now.")
+            else:
+                if "silver key" in items:
+                    print("You slide the silver key into the locker lock.")
+                    print("Click.")
+                    print("Inside is a small wax stamp with a glowing symbol.")
+                    print("You took the royal seal!")
+                    items.append("royal seal")
+                else:
+                    print("The locker is locked tight.")
+                    print("A silver key-shaped slot stares back at you.")
+
+        elif choice == "c":
+            if "shield" in items:
+                print("The Rusty Knight's helmet turns slightly toward your shield.")
+                print("'Good. The Tower throws stones. A shield keeps promises.'")
+            else:
+                print("The Rusty Knight does not move.")
+                print("You feel like it is judging your empty arms.")
+
+        elif choice == "d":
+            courtyard(items, coins)
+            return
+
+        elif choice == "e":
+            if "rope" in items:
+                print("The side stair is broken halfway up.")
+                print("You tie your rope and climb carefully.")
+                tower(items, coins)
+                return
+            else:
+                print("The side stair is broken halfway up.")
+                print("If only you had something to climb with...")
+
+        elif choice == "check" or choice == "check items":
+            if len(items) > 0:
+                print(f"You have: {items}")
+            else:
+                print("You have no items.")
+            print(f"Coins: {len(coins)}")
+
+        else:
+            print("Please choose a, b, c, d, e, or check items.")
+
+
+def cellar(items, coins):
+    print("You climb into the Cellar. It is damp and the ceiling is low.")
+    print("A chained chest sits beside a stack of crates.")
+    print("What would you like to do?")
+    print("a. Search the crates")
+    print("b. Check the chained chest")
+    print("c. Climb back up to the Kitchen")
+    print("d. Climb the ladder (to the Tower basement)")
+
+    while True:
+
+        choice = input("Choose a, b, c, d, or check items: ")
+
+        if choice == "a":
+            if "rope" in items:
+                print("The crates are mostly splinters now.")
+            else:
+                print("You dig through the crates and pull out a coil of rope.")
+                print("You took rope!")
+                items.append("rope")
+
+        elif choice == "b":
+            if "torch" in items:
+                print("The chest is open and empty now.")
+            else:
+                if len(coins) > 0:
+                    print("You wedge a coin into the chain lock and twist.")
+                    print("Snap!")
+                    print("Inside is a dry torch.")
+                    print("You took a torch!")
+                    items.append("torch")
+                else:
+                    print("The chain won't budge.")
+                    print("You notice a thin slot in the lock... like it could fit a coin.")
+
+        elif choice == "c":
+            kitchen(items, coins)
+            return
+
+        elif choice == "d":
+            tower(items, coins)
+            return
+
+        elif choice == "check" or choice == "check items":
+            if len(items) > 0:
+                print(f"You have: {items}")
+            else:
+                print("You have no items.")
+            print(f"Coins: {len(coins)}")
+
+        else:
+            print("Please choose a, b, c, d, or check items.")
+
+
+def tower(items, coins):
+    print("You are inside the Tower. The walls hum like they are alive.")
+    print("A silent bell hangs above a stairway that spirals upward.")
+    print("What would you like to do?")
+    print("a. Climb the spiral stairs")
+    print("b. Examine the silent bell")
+    print("c. Exit to the Courtyard (front gate)")
+    print("d. Exit to the Armory (side stair)")
+    print("e. Go down to the Cellar (basement ladder)")
+
+    while True:
+
+        choice = input("Choose a, b, c, d, e, or check items: ")
+
+        if choice == "a":
+            if "shield" in items:
+                final_boss(items, coins)
+                return
+            else:
+                print("Pebbles fall from above. The stairs are dangerous.")
+                print("You feel like you need protection before going up.")
+
+        elif choice == "b":
+            if "torch" in items:
+                print("Your torch flickers near the bell.")
+                print("A shadow under the bell shrinks away.")
+                print("The Tower seems less angry.")
+            else:
+                print("The bell is cold. Too cold.")
+                print("You swear you can see darkness pooling beneath it.")
+
+        elif choice == "c":
+            courtyard(items, coins)
+            return
+
+        elif choice == "d":
+            armory(items, coins)
+            return
+
+        elif choice == "e":
+            cellar(items, coins)
+            return
+
+        elif choice == "check" or choice == "check items":
+            if len(items) > 0:
+                print(f"You have: {items}")
+            else:
+                print("You have no items.")
+            print(f"Coins: {len(coins)}")
+
+        else:
+            print("Please choose a, b, c, d, e, or check items.")
+
+
+def final_boss(items, coins):
+    print("You reach the top of the Tower.")
+    print("A Shadow Keeper rises from the floor like smoke.")
+    print("It speaks without a mouth: 'SHOW ME THE LIGHT OR BE FORGOTTEN.'")
+    print("What would you like to do?")
+    print("a. Hold up the royal seal")
+    print("b. Use the torch")
+    print("c. Run back down the stairs")
+
+    while True:
+
+        choice = input("Choose a, b, c, or check items: ")
+
+        if choice == "a":
+            if "royal seal" in items:
+                print("The royal seal glows, but the Shadow Keeper only laughs.")
+                print("'A name does not beat darkness. Try again.'")
+            else:
+                print("You don't have anything like that.")
+                print("The Shadow Keeper leans closer.")
+
+        elif choice == "b":
+            if "torch" in items:
+                print("You raise the torch high.")
+                print("The flame flares, and the Shadow Keeper shatters into smoke.")
+                print("The Tower bell rings once—LOUD—and the curse breaks.")
+                print("YOU WIN!")
+                return
+            else:
+                print("You don't have a torch.")
+                print("The Shadow Keeper grows taller.")
+
+        elif choice == "c":
+            tower(items, coins)
+            return
+
+        elif choice == "check" or choice == "check items":
+            if len(items) > 0:
+                print(f"You have: {items}")
+            else:
+                print("You have no items.")
+            print(f"Coins: {len(coins)}")
+
+        else:
+            print("Please choose a, b, c, or check items.")
+
+
+def main():
+    coins_list = []
+    items_list = []
+    courtyard(items_list, coins_list)
+
+main()
