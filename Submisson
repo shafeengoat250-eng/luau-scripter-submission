@@ -1,6 +1,7 @@
 def courtyard(items, coins):
-    print("you are in a windy courtyard. a stone gardener stands by a dry fountain.")
-    print("a. kitchen  b. armory  c. pick apple  d. fountain  e. tower gate")
+    print("You are in a windy courtyard    luisa's stone statue stands by a dry fountain")
+    
+    print("a kitchen   b armory    c pick apple   d fountain    e tower gate")
 
     while True:
 
@@ -16,16 +17,20 @@ def courtyard(items, coins):
 
         elif choice == "c":
             if "apple" in items:
-                print("you already took the apple.")
+                print("You already took the apple")
+                
             else:
-                print("you took an apple.")
+                print("you took an apple")
+                
                 items.append("apple")
 
         elif choice == "d":
             if "fountain coin" in coins:
-                print("nothing else in the fountain.")
+                print("Nothing else in the fountain")
+                
             else:
-                print("you found a coin.")
+                print("you found a coin   it has alex scratched on it")
+                
                 coins.append("fountain coin")
 
         elif choice == "e":
@@ -33,22 +38,27 @@ def courtyard(items, coins):
                 tower(items, coins)
                 return
             else:
-                print("the tower gate is sealed. maybe you need proof to enter.")
+                print("the tower gate is sealed    zac probably left proof somewhere")
+                
 
         elif choice == "check" or choice == "check items":
             if len(items) > 0:
-                print(f"items: {items}")
+                print(f"Items: {items}")
+                
             else:
                 print("items: none")
+                
             print(f"coins: {len(coins)}")
 
         else:
-            print("pick a-e or check items.")
+            print("Pick a-e or check items")
+            
 
 
 def kitchen(items, coins):
-    print("kitchen. a chef ghost floats by a cold oven.")
-    print("a. cupboards  b. talk to chef  c. courtyard  d. cellar")
+    print("kitchen    brian's chef ghost floats by a cold oven")
+    
+    print("a cupboards   b talk to chef    c courtyard   d cellar")
 
     while True:
 
@@ -56,20 +66,25 @@ def kitchen(items, coins):
 
         if choice == "a":
             if "wooden spoon" in items:
-                print("nothing useful left.")
+                print("Nothing useful left")
+                
             else:
-                print("you took a wooden spoon.")
+                print("you took a wooden spoon")
+                
                 items.append("wooden spoon")
 
         elif choice == "b":
             if "silver key" in items:
-                print("chef: 'no more deals.'")
+                print("Brian: no more deals")
+                
             else:
                 if "apple" in items:
-                    print("chef trades you for a silver key.")
+                    print("brian trades you for a silver key")
+                    
                     items.append("silver key")
                 else:
-                    print("chef: 'bring me something fresh.'")
+                    print("brian: Bring me something fresh")
+                    
 
         elif choice == "c":
             courtyard(items, coins)
@@ -82,17 +97,21 @@ def kitchen(items, coins):
         elif choice == "check" or choice == "check items":
             if len(items) > 0:
                 print(f"items: {items}")
+                
             else:
-                print("items: none")
-            print(f"coins: {len(coins)}")
+                print("Items: none")
+                
+            print(f"Coins: {len(coins)}")
 
         else:
-            print("pick a-d or check items.")
+            print("pick a-d or check items")
+            
 
 
 def armory(items, coins):
-    print("armory. a rusty knight stands still near a rack.")
-    print("a. take shield  b. locker  c. talk to knight  d. courtyard  e. side stair")
+    print("Armory   hershel's rusty knight stands still near a rack")
+    
+    print("a take shield   b locker    c talk to knight   d courtyard    e side stair")
 
     while True:
 
@@ -100,26 +119,33 @@ def armory(items, coins):
 
         if choice == "a":
             if "shield" in items:
-                print("you already have the shield.")
+                print("you already have the shield")
+                
             else:
-                print("you took a shield.")
+                print("You took a shield")
+                
                 items.append("shield")
 
         elif choice == "b":
             if "royal seal" in items:
-                print("locker is empty.")
+                print("Locker is empty")
+                
             else:
                 if "silver key" in items:
-                    print("you open the locker and take a royal seal.")
+                    print("you open the locker and take zac's royal seal")
+                    
                     items.append("royal seal")
                 else:
-                    print("locker is locked. looks like it needs a silver key.")
+                    print("locker is locked   looks like it needs a silver key")
+                    
 
         elif choice == "c":
             if "shield" in items:
-                print("knight: 'good. the tower throws stones.'")
+                print("Hershel: good   the tower throws stones")
+                
             else:
-                print("the knight doesn't move.")
+                print("the knight doesn't move")
+                
 
         elif choice == "d":
             courtyard(items, coins)
@@ -130,22 +156,27 @@ def armory(items, coins):
                 tower(items, coins)
                 return
             else:
-                print("stairs are broken. you need something to climb with.")
+                print("stairs are broken     you need something to climb with")
+                
 
         elif choice == "check" or choice == "check items":
             if len(items) > 0:
-                print(f"items: {items}")
+                print(f"ITEMS: {items}")
+                
             else:
                 print("items: none")
+                
             print(f"coins: {len(coins)}")
 
         else:
-            print("pick a-e or check items.")
+            print("Pick a-e or check items")
+            
 
 
 def cellar(items, coins):
-    print("cellar. damp and dark. there's a chained chest and some crates.")
-    print("a. crates  b. chest  c. kitchen  d. tower basement")
+    print("basement   damp and dark    alex's crates are stacked near a chained chest")
+    
+    print("a crates    b chest   c kitchen    d tower basement")
 
     while True:
 
@@ -153,20 +184,25 @@ def cellar(items, coins):
 
         if choice == "a":
             if "rope" in items:
-                print("nothing else in the crates.")
+                print("Nothing else in the crates")
+                
             else:
-                print("you took rope.")
+                print("you took rope")
+                
                 items.append("rope")
 
         elif choice == "b":
             if "torch" in items:
-                print("chest is empty.")
+                print("chest is empty")
+                
             else:
                 if len(coins) > 0:
-                    print("you force the lock with a coin and take a torch.")
+                    print("You force the lock with a coin and take luisa's torch")
+                    
                     items.append("torch")
                 else:
-                    print("the lock has a thin slot... maybe a coin could help.")
+                    print("the lock has a thin slot   maybe a coin could help")
+                    
 
         elif choice == "c":
             kitchen(items, coins)
@@ -179,17 +215,21 @@ def cellar(items, coins):
         elif choice == "check" or choice == "check items":
             if len(items) > 0:
                 print(f"items: {items}")
+                
             else:
                 print("items: none")
-            print(f"coins: {len(coins)}")
+                
+            print(f"Coins: {len(coins)}")
 
         else:
-            print("pick a-d or check items.")
+            print("pick a-d or check items")
+            
 
 
 def tower(items, coins):
-    print("tower. a silent bell hangs above spiral stairs.")
-    print("a. go up  b. bell  c. courtyard  d. armory  e. cellar")
+    print("tower    zac's silent bell hangs above spiral stairs")
+    
+    print("a go up    b bell    c courtyard   d armory    e basement")
 
     while True:
 
@@ -200,13 +240,16 @@ def tower(items, coins):
                 final_boss(items, coins)
                 return
             else:
-                print("stones fall from above. you should have protection.")
+                print("Stones fall from above    you should have protection")
+                
 
         elif choice == "b":
             if "torch" in items:
-                print("the torch light makes the tower feel safer.")
+                print("the torch light makes the tower feel safer   brian would be proud")
+                
             else:
-                print("the bell feels cold. very cold.")
+                print("The bell feels cold    very cold")
+                
 
         elif choice == "c":
             courtyard(items, coins)
@@ -223,17 +266,21 @@ def tower(items, coins):
         elif choice == "check" or choice == "check items":
             if len(items) > 0:
                 print(f"items: {items}")
+                
             else:
                 print("items: none")
+                
             print(f"coins: {len(coins)}")
 
         else:
-            print("pick a-e or check items.")
+            print("pick a-e or check items")
+            
 
 
 def final_boss(items, coins):
-    print("top of the tower. a shadow keeper blocks your way.")
-    print("a. use royal seal  b. use torch  c. run back")
+    print("Top of the tower    zac's shadow keeper blocks your way")
+    
+    print("a use royal seal    b use torch   c run back")
 
     while True:
 
@@ -241,16 +288,20 @@ def final_boss(items, coins):
 
         if choice == "a":
             if "royal seal" in items:
-                print("it glows, but doesn't stop the shadow.")
+                print("it glows   but doesn't stop the shadow   zac's curse is stronger than that")
+                
             else:
-                print("you don't have that.")
+                print("You don't have that")
+                
 
         elif choice == "b":
             if "torch" in items:
-                print("the shadow burns away. you win!")
+                print("the shadow burns away   luisa alex brian hershel are finally free   you win")
+                
                 return
             else:
-                print("you don't have a torch.")
+                print("you don't have a torch")
+                
 
         elif choice == "c":
             tower(items, coins)
@@ -259,12 +310,15 @@ def final_boss(items, coins):
         elif choice == "check" or choice == "check items":
             if len(items) > 0:
                 print(f"items: {items}")
+                
             else:
                 print("items: none")
+                
             print(f"coins: {len(coins)}")
 
         else:
-            print("pick a-c or check items.")
+            print("pick a-c or check items")
+            
 
 
 def main():
@@ -273,4 +327,3 @@ def main():
     courtyard(items_list, coins_list)
 
 main()
-
