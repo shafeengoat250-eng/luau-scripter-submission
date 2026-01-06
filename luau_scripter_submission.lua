@@ -31,7 +31,7 @@ local ABILITIES = {
 	},
 }
 
---// DashStrike config
+--// Dash into a strike config
 -- a dash forward and it hit the person with damage and knockback
 local DASH_DISTANCE = 12
 local DASH_TIME = 0.12
