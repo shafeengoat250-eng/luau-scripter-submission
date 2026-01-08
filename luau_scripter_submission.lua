@@ -148,7 +148,7 @@ end
 
 local function getRoot(character: Model): BasePart -- gets hrp for position, facing/movement
 	local root = character:FindFirstChild("HumanoidRootPart") -- main root part reference
-	if root and root:IsA("BasePart") then -- validate it exists and is a part
+	if root and root:IsA("BasePart") then
 		return root -- return the root part
 	end
 	return nil -- missing or invalid root
