@@ -4,16 +4,16 @@
 --Functionality summarized:
 --[[ 
 	This script functions as a server ability system.
-WE don't want clients to cheat by enforcing per player cooldowns and executing the ability logic clients only request an ability name by a remoteEvent. 
+I don't want clients to cheat by enforcing per player cooldowns and executing the ability logic clients only request an ability name by a remoteEvent. 
 The server then verifies the request.
 How it functions and how the parts fit together:
 Every player receives an instance of the AbilityController
 which holds the cooldown state for each ability name
 When AbilityRequest is triggered, the server executes tryCast after rejecting bad data and grabbing or creating the player's controller
 One of three abilities can be accessed using tryCast: 
-• DashStrike: use a brief forward dash (LinearVelocity) and a delayed box hit check in front to cause damage or knockback
-• Shockwave: close humanoids are harmed or knocked back by rubble vfx that is sampled from the ground and box query surrounding the caster.
-• ThrowRock: an anchored projectile that travels along a quadratic Bezier arc. Raycasts between frames stop it from tunneling until it strikes, causing damage and knockback-- (math and RunService)
+DashStrike- use a brief forward dash (LinearVelocity) and a delayed box hit check in front to cause damage or knockback
+Shockwave- close humanoids are harmed or knocked back by rubble vfx that is sampled from the ground and box query surrounding the caster
+ThrowRock- an anchored projectile that travels along a quadratic Bezier arc. Raycasts between frames stop it from tunneling until it strikes, causing damage and knockback-- (math and RunService)
 	- All hits/damage are decided on the server (Overlap queries and raycasts).
 ]]
 --How to play, Q to dashstrike // E to shockwave // R to throw
@@ -78,7 +78,7 @@ local ROCK_SIZE = Vector3.new(3,3,3)
 local ROCK_SPAWN_FORWARD_OFFSET = 1
 local ROCK_SPAWN_UP_OFFSET = 1
 
---  AbilityController (per-player state)
+--  AbilityController (per player state)
 -- Each player gets their own controller instance (metatable/OOP) so cooldown tracking stays single
 -- Each player gets their own controller instance so cooldowns are tracked per-player instead of globally
 -- Because if cooldown state was shared one player's cast could accidentally put the ability on cooldown for everyone
@@ -127,10 +127,10 @@ function AbilityController.startCooldown(self: AbilityControllerT, abilityName: 
 end
 
 -- Character helpers
--- We wrap common character lookups (Character / Humanoid / HumanoidRootPart) into helpers because:
+-- I wrap common character lookups (Character / Humanoid / HumanoidRootPart) into helpers because:
 --  Readability- the ability code stays focused on what the ability is doing then repeated checks
 -- Safe- characters can be nil missing parts during respawn, death etc
---  Consistency- every ability validates the same required pieces (alive humanoid + root) before doing movement/damage.
+--  Consistency- every ability confirms the same required pieces (alive humanoid and root) before doing movement/damage.
 --  Less repeated work you only DO FindFirstChild/FindFirstChildOfClass calls once per cast,
 --    instead of PUTTING them everywhere in each ability section.
 
@@ -152,6 +152,12 @@ end
 
 -- Hit detection helper
 -- Uses OverlapParams and GetPartBoundsInBox to collect unique humanoids in a box region.
+-- Why:
+--  Clients cant fake hits so the hitboxes have to be on the server
+--  Simple aoe thing shapes a box is easy to size/offset for dashes and shockwaves
+-- Filtering, OverlapParams lets us not include the caster’s character so you don’t hit yourself.
+--  Unique humanoids-- characters have multiple parts, avoid dealing damage multiple times.
+
 local function getTargetsInBox(boxCFrame: CFrame, boxSize: Vector3, ignoreInstances: {Instance}): {Humanoid}
 	local params = OverlapParams.new()
 	params.FilterType = Enum.RaycastFilterType.Exclude
@@ -178,6 +184,10 @@ end
 
 -- Combat helper
 -- Knockback is applied by setting target root velocity away from the impact origin.
+-- I apply knockback by setting the target’s HumanoidRootPart velocity away from the impact origin because
+-- It’s immediate and server controlled so the client can’t cancel 
+--  no extra constraints to cleanup for every target (just one velocity set)
+
 local function applyKnockbackToHumanoid(humanoid: Humanoid, fromPosition: Vector3, strength: number)
 	local character = humanoid.Parent
 	if not character or not character:IsA("Model") then
@@ -205,6 +215,11 @@ end
 
 -- Movement helper (DashStrike)
 -- Uses LinearVelocity
+-- I use the LinearVelocity for the dash because it gives a consistent bursts of movement
+-- Predictable because you set an exact VectorVelocity so the dash distance/time feels the same each cast
+-- Easy cleanup because I destroy the LinearVelocity after a short duration so it doesn’t keep pushing the player
+
+
 local function dashWithLinearVelocity(root: BasePart, direction: Vector3, speed: number, duration: number)
 	if direction.Magnitude < 0.001 then
 		return
@@ -235,6 +250,9 @@ end
 
 -- ThrowRock helpers (Bezier + anti-tunneling raycasts)
 -- Quadratic Bezier gives a clean arc using only Vector3 math (no physics simulation NEEDED)
+-- Clean arc control because you can adjust range and arc height without using gravity tuning because of the start/control/end points.
+--  Raycasts stop tunneling by confirming the lastPos to newPos every frame which makes sure quick motion while still registering hits
+
 local function bezierQuadratic(p0: Vector3, p1: Vector3, p2: Vector3, t: number): Vector3
 	local a = p0:Lerp(p1, t)
 	local b = p1:Lerp(p2, t)
@@ -318,6 +336,10 @@ end
 
 -- Shockwave VFX helper
 -- Spawns small debris chunks sampled from the ground material/color and pushes them outward.
+-- Shockwave debris is looks only
+-- Sampling the ground’s material/color makes the effect blend with whatever surface you’re on (stone, grass, sand, etc)
+-- Pushing the chunks outward/upward visually matches the shockwave expanding idea and Debris cleanup prevents leaks
+
 local function spawnShockwaveDebris(origin: Vector3, ignore: {Instance})
 	local params = RaycastParams.new()
 	params.FilterType = Enum.RaycastFilterType.Exclude
@@ -400,7 +422,7 @@ function AbilityController.tryCast(self: AbilityControllerT, abilityName: string
 		return
 	end
 
-	-- Cooldown check is always serverside; client requests are treated as untrusted.
+	-- Cooldown check is always serverside, client requests are treated as not trusted
 	if AbilityController.isOnCooldown(self, abilityName) then
 		return
 	end
@@ -495,7 +517,12 @@ function AbilityController.tryCast(self: AbilityControllerT, abilityName: string
 end
 
 -- Controllers storage
--- Stored by Player so we can keep per player state without putting state on Instances.
+-- Stored by Player so I can keep per player state without putting state on Instances.
+-- I store controllers in a table keyed by Player because it keeps per player state (cooldowns) in easy Lua
+-- instead of attaching values or attributes to Instances.
+-- That avoids extra Instance objects, and makes the cleanup simple easy
+-- when the Player leaves, I just nil the entry and the controller can be garbage collected
+
 local controllers: {[Player]: AbilityControllerT} = {}
 
 local function getController(player: Player): AbilityControllerT
@@ -513,8 +540,6 @@ Players.PlayerRemoving:Connect(function(player: Player)
 end)
 
 abilityRequest.OnServerEvent:Connect(function(player: Player, abilityName: any)
-	-- Treating the remote input as untrusted
-	-- I do this because
 	if typeof(abilityName) ~= "string" then
 		return
 	end
