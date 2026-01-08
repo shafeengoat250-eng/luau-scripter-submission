@@ -1,23 +1,14 @@
--- AbilitySystem.server.lua
--- Server ability system demo:
--- - Client only requests an ability name; server validates + executes (prevents client side cheating).
--- - Shows CFrame math (dash direction), physics constraints (LinearVelocity), hit detection (OverlapParams / GetPartBoundsInBox),
---   a Bezier projectile (math + RunService), and VFX debris (raycasts + Debris cleanup).
--- Controls are handled by a separate client script which fires AbilityRequest.
-
---How to play, Q to dashstrike // E to shockwave // R to throw
-
---// Services
+--!strict
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local Debris = game:GetService("Debris")
 
---// Remotes
+
 local remotesFolder = ReplicatedStorage.Remotes
 local abilityRequest =  remotesFolder.AbilityRequest:: RemoteEvent
 
---// Ability definitions with their cooldowns
+
 local ABILITIES = {
 	DashStrike = {
 		cooldown = 1.5,
@@ -32,8 +23,7 @@ local ABILITIES = {
 	},
 }
 
---// DashStrike config
--- A short forward dash followed by a single hitbox check in front of the player.
+
 local DASH_DISTANCE = 12
 local DASH_TIME = 0.12
 local HITBOX_SIZE = Vector3.new(15, 15, 15)
@@ -41,8 +31,7 @@ local HITBOX_FORWARD_OFFSET = 5
 local DAMAGE = 20
 local KNOCKBACK = 250
 
---// Shockwave config
--- A shockwave effect that damages nearby humanoids and spawns outward-moving debris for visual impact
+
 local SHOCKWAVE_RADIUS = 14
 local SHOCKWAVE_HEIGHT = 6
 local SHOCKWAVE_DAMAGE = 30
@@ -56,8 +45,7 @@ local DEBRIS_MAX_SIZE = 1.6
 local DEBRIS_OUT_SPEED = 55
 local DEBRIS_UP_SPEED = 30
 
---// ThrowRock (Bezier Curve) config
--- Projectile with a quadratic Bezier curve
+
 local ROCK_RANGE = 30
 local ROCK_FLIGHT_TIME = 0.45
 local ROCK_ARC_HEIGHT = 10
@@ -67,8 +55,7 @@ local ROCK_SIZE = Vector3.new(3,3,3)
 local ROCK_SPAWN_FORWARD_OFFSET = 1
 local ROCK_SPAWN_UP_OFFSET = 1
 
---// AbilityController (per-player state)
--- Each player gets their own controller instance (metatable/OOP) so cooldown tracking stays isolated
+
 local AbilityController = {}
 AbilityController.__index = AbilityController
 
@@ -97,7 +84,7 @@ function AbilityController.isOnCooldown(self: AbilityControllerT, abilityName: s
 end
 
 function AbilityController.startCooldown(self: AbilityControllerT, abilityName: string, cooldownSeconds: number)
-	-- Boolean cooldowns keep the system simple and prevent spamming
+	
 	self.onCooldown[abilityName] = true
 
 	task.spawn(function()
@@ -106,8 +93,7 @@ function AbilityController.startCooldown(self: AbilityControllerT, abilityName: 
 	end)
 end
 
---// Character helpers
--- accessors keep the ability logic readable to people and avoids instance lookups
+
 local function getCharacter(player: Player): Model
 	return player.Character
 end
@@ -124,8 +110,7 @@ local function getRoot(character: Model): BasePart
 	return nil
 end
 
---// Hit detection helper
--- Uses OverlapParams + GetPartBoundsInBox to collect unique humanoids in a box region.
+
 local function getTargetsInBox(boxCFrame: CFrame, boxSize: Vector3, ignoreInstances: {Instance}): {Humanoid}
 	local params = OverlapParams.new()
 	params.FilterType = Enum.RaycastFilterType.Exclude
@@ -150,8 +135,6 @@ local function getTargetsInBox(boxCFrame: CFrame, boxSize: Vector3, ignoreInstan
 	return targets
 end
 
---// Combat helper
--- Knockback is applied by setting target root velocity away from the impact origin.
 local function applyKnockbackToHumanoid(humanoid: Humanoid, fromPosition: Vector3, strength: number)
 	local character = humanoid.Parent
 	if not character or not character:IsA("Model") then
@@ -177,8 +160,7 @@ local function applyKnockbackToHumanoid(humanoid: Humanoid, fromPosition: Vector
 	)
 end
 
---// Movement helper (DashStrike)
--- Uses LinearVelocity
+
 local function dashWithLinearVelocity(root: BasePart, direction: Vector3, speed: number, duration: number)
 	if direction.Magnitude < 0.001 then
 		return
@@ -207,8 +189,7 @@ local function dashWithLinearVelocity(root: BasePart, direction: Vector3, speed:
 	end)
 end
 
---// ThrowRock helpers (Bezier + anti-tunneling raycasts)
--- Quadratic Bezier gives a clean arc using only Vector3 math (no physics simulation NEEDED)
+
 local function bezierQuadratic(p0: Vector3, p1: Vector3, p2: Vector3, t: number): Vector3
 	local a = p0:Lerp(p1, t)
 	local b = p1:Lerp(p2, t)
@@ -254,7 +235,7 @@ local function spawnRockBezier(ownerCharacter: Model, startPos: Vector3, directi
 		local pos = bezierQuadratic(startPos, control, endPos, t)
 		local step = pos - lastPos
 
-		-- Raycast between frames so fast projectiles still register hits
+		
 		if step.Magnitude > 0 then
 			local result = game.Workspace:Raycast(lastPos, step, rayParams)
 			if result then
@@ -276,7 +257,7 @@ local function spawnRockBezier(ownerCharacter: Model, startPos: Vector3, directi
 
 		rock.Position = pos
 
-		-- You can easily change this it orentates based on where your facing.
+	
 		if step.Magnitude > 0.001 then
 			rock.CFrame = CFrame.lookAt(pos, pos + step.Unit)
 		end
@@ -290,8 +271,7 @@ local function spawnRockBezier(ownerCharacter: Model, startPos: Vector3, directi
 	end)
 end
 
---// Shockwave VFX helper
--- Spawns small debris chunks sampled from the ground material/color and pushes them outward.
+
 local function spawnShockwaveDebris(origin: Vector3, ignore: {Instance})
 	local params = RaycastParams.new()
 	params.FilterType = Enum.RaycastFilterType.Exclude
@@ -362,7 +342,7 @@ local function spawnShockwaveDebris(origin: Vector3, ignore: {Instance})
 			end
 		end)
 
-		-- Debris service cleans up temporary vfx parts automatically
+	
 		Debris:AddItem(rock, DEBRIS_LIFETIME)
 	end
 end
@@ -374,7 +354,7 @@ function AbilityController.tryCast(self: AbilityControllerT, abilityName: string
 		return
 	end
 
-	-- Cooldown check is always serverside; client requests are treated as untrusted.
+
 	if AbilityController.isOnCooldown(self, abilityName) then
 		return
 	end
@@ -468,8 +448,7 @@ function AbilityController.tryCast(self: AbilityControllerT, abilityName: string
 	AbilityController.startCooldown(self, abilityName, def.cooldown)
 end
 
---// Controllers storage
--- Stored by Player so we can keep per player state without putting state on Instances.
+
 local controllers: {[Player]: AbilityControllerT} = {}
 
 local function getController(player: Player): AbilityControllerT
@@ -482,12 +461,12 @@ local function getController(player: Player): AbilityControllerT
 end
 
 Players.PlayerRemoving:Connect(function(player: Player)
-	-- I use the event to clean up memory leaks
+	
 	controllers[player] = nil
 end)
 
 abilityRequest.OnServerEvent:Connect(function(player: Player, abilityName: any)
-	-- Treating the remote input as untrusted validate types before indexing tables or calling methods.
+
 	if typeof(abilityName) ~= "string" then
 		return
 	end
