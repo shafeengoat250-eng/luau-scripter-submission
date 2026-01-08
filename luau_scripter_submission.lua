@@ -1,5 +1,5 @@
 --!strict
---FIXED suggestions from EssentialBlue 
+--FIXED suggestions from EssentialBlue (only comments added and changed the waitforchild)
 -- AbilitySystem.server.lua
 -- Server ability system demo:
 --Functionality summarized:
