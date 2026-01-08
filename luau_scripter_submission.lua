@@ -1,4 +1,5 @@
 --!strict
+--FIXED suggestions from EssentialBlue 
 -- AbilitySystem.server.lua
 -- Server ability system demo:
 --Functionality summarized:
