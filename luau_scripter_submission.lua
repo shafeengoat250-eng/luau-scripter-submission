@@ -1,23 +1,37 @@
---!strict
 -- AbilitySystem.server.lua
--- Server ability system:
--- - client only requests an ability name.
--- - Shows CFrame math
---   Uses BEZIER formula for a projectile
--- Controls are handled by a separate client script which fires AbilityRequest
---How to play, Q to dashstrike E to shockwave R to throw
+-- Server ability system demo (server-authoritative).
+--
+-- Why server-authoritative:
+-- The client is treated as untrusted because exploiters can edit client code. The client only requests an
+-- ability name; the server decides whether it can run (cooldowns/valid state) and is the only place that
+-- applies movement, damage, knockback, and VFX.
+--
+-- High-level execution flow:
+-- 1) Client detects input (Q/E/R) and fires AbilityRequest(abilityName)
+-- 2) Server receives the RemoteEvent, validates the argument type, then fetches/creates a controller for that player
+-- 3) AbilityController.tryCast routes to the correct ability implementation
+-- 4) Ability logic uses shared helpers (targeting/knockback/projectile/VFX) so behavior is consistent across abilities
+-- 5) A server-side cooldown flag is set so repeated requests are ignored until the cooldown ends
+--
+-- Demonstrates Roblox APIs: RemoteEvents, RunService.Heartbeat, Raycasting, OverlapParams/GetPartBoundsInBox,
+-- physics constraints (LinearVelocity), Debris cleanup, and CFrame/Vector3 math (including a Bezier projectile).
 
--- Services
+--How to play, Q to dashstrike // E to shockwave // R to throw
+
+--// Services
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local Debris = game:GetService("Debris")
 
--- Remotes events from client
-local remotesFolder = ReplicatedStorage:WaitForChild("Remotes")
-local abilityRequest = remotesFolder:WaitForChild("AbilityRequest") :: RemoteEvent
+--// Remotes
+-- The remote is intentionally simple (string only) so the server never relies on client-provided positions/targets.
+local remotesFolder = ReplicatedStorage.Remotes
+local abilityRequest =  remotesFolder.AbilityRequest:: RemoteEvent
 
--- Abilites with their cooldowns
+--// Ability definitions with their cooldowns
+-- Cooldowns are stored here so balance changes don’t require touching the core logic.
+-- tryCast reads this table first, which also prevents unknown ability names from being executed.
 local ABILITIES = {
 	DashStrike = {
 		cooldown = 1.5,
@@ -28,25 +42,28 @@ local ABILITIES = {
 	},
 
 	ThrowRock = {
-		cooldown = 2.5,
+		cooldown = 0.25,
 	},
 }
 
--- Dash into a strike config
--- a dash forward and it hit the person with damage and knockback
+--// DashStrike config
+-- DashStrike is designed as "movement first, hit second":
+-- we dash using physics constraints, then check a hitbox slightly after so hits line up with the new position.
 local DASH_DISTANCE = 12
 local DASH_TIME = 0.12
 local HITBOX_SIZE = Vector3.new(15, 15, 15)
 local HITBOX_FORWARD_OFFSET = 5
 local DAMAGE = 20
-local KNOCKBACK = 400
+local KNOCKBACK = 250
 
--- Shockwave config
--- a shockwave that makes the player get knockback with a radius and a VFX effect. (Debris spreading out)
+--// Shockwave config
+-- Shockwave approximates a circular AOE using a short box:
+-- this is fast, deterministic, and easy to tune compared to per-target distance loops.
+-- Debris settings are purely cosmetic and get cleaned up automatically to avoid leaving temporary parts behind.
 local SHOCKWAVE_RADIUS = 14
 local SHOCKWAVE_HEIGHT = 6
 local SHOCKWAVE_DAMAGE = 30
-local SHOCKWAVE_KNOCKBACK = 125
+local SHOCKWAVE_KNOCKBACK = 180
 local DEBRIS_COUNT = 22
 local DEBRIS_RADIUS = 3
 local DEBRIS_SPREAD = 12
@@ -56,19 +73,21 @@ local DEBRIS_MAX_SIZE = 1.6
 local DEBRIS_OUT_SPEED = 55
 local DEBRIS_UP_SPEED = 30
 
---Rock Throw (Bezier Curve) config
--- Projectile with a quadratic Bezier curve
-local ROCK_RANGE = 17
+--// ThrowRock (Bezier Curve) config
+-- ThrowRock uses a quadratic Bezier so the arc is consistent and not dependent on physics simulation/network ownership.
+-- We still raycast along each frame step so the projectile can’t "tunnel" through thin targets at high speed.
+local ROCK_RANGE = 30
 local ROCK_FLIGHT_TIME = 0.45
-local ROCK_ARC_HEIGHT = 14
-local ROCK_DAMAGE = 25
+local ROCK_ARC_HEIGHT = 10
+local ROCK_DAMAGE = 50
 local ROCK_KNOCKBACK = 90
 local ROCK_SIZE = Vector3.new(3,3,3)
 local ROCK_SPAWN_FORWARD_OFFSET = 1
 local ROCK_SPAWN_UP_OFFSET = 1
 
--- AbilityController (per player state)
--- Each player gets their own controller instance metatable/OOP
+--// AbilityController (per-player state)
+-- One controller per player keeps state isolated and makes cleanup easy when players leave.
+-- This also avoids storing gameplay state on Instances, which keeps the system easier to reason about and test.
 local AbilityController = {}
 AbilityController.__index = AbilityController
 
@@ -84,6 +103,7 @@ export type AbilityControllerT = AbilityControllerData & {
 }
 
 function AbilityController.new(player: Player): AbilityControllerT
+	-- Metatable-based "class" pattern: plain table for data + methods through __index.
 	local self: AbilityControllerData = {
 		player = player,
 		onCooldown = {},
@@ -97,7 +117,8 @@ function AbilityController.isOnCooldown(self: AbilityControllerT, abilityName: s
 end
 
 function AbilityController.startCooldown(self: AbilityControllerT, abilityName: string, cooldownSeconds: number)
-	-- Boolean cooldowns keep the system simple and prevent spamming
+	-- Cooldowns are enforced server-side so a client can’t spam RemoteEvent calls to bypass limits.
+	-- Using a boolean map keeps lookups O(1) and avoids tracking timestamps.
 	self.onCooldown[abilityName] = true
 
 	task.spawn(function()
@@ -106,8 +127,9 @@ function AbilityController.startCooldown(self: AbilityControllerT, abilityName: 
 	end)
 end
 
--- Character helpers
--- accessors keep the ability logic readable to people and avoids instance lookups
+--// Character helpers
+-- These wrappers keep ability code focused on gameplay logic instead of repetitive instance traversal.
+-- All abilities require: character exists, humanoid exists (alive), and a root part for positioning/facing direction.
 local function getCharacter(player: Player): Model
 	return player.Character
 end
@@ -117,6 +139,7 @@ local function getHumanoid(character: Model): Humanoid
 end
 
 local function getRoot(character: Model): BasePart
+	-- HumanoidRootPart is used as the shared reference for hitboxes, direction (LookVector), and knockback.
 	local root = character:FindFirstChild("HumanoidRootPart")
 	if root and root:IsA("BasePart") then
 		return root
@@ -124,8 +147,12 @@ local function getRoot(character: Model): BasePart
 	return nil
 end
 
---Hit detection helper
--- Uses OverlapParams and GetPartBoundsInBox to collect humanoids in a box region
+--// Hit detection helper
+-- Uses overlap queries instead of Touched events:
+-- - deterministic (no reliance on physics contact callbacks)
+-- - easy to exclude the caster’s character
+-- - shared by DashStrike and Shockwave to keep targeting consistent
+-- We dedupe humanoids because GetPartBoundsInBox returns many parts per character rig.
 local function getTargetsInBox(boxCFrame: CFrame, boxSize: Vector3, ignoreInstances: {Instance}): {Humanoid}
 	local params = OverlapParams.new()
 	params.FilterType = Enum.RaycastFilterType.Exclude
@@ -150,8 +177,9 @@ local function getTargetsInBox(boxCFrame: CFrame, boxSize: Vector3, ignoreInstan
 	return targets
 end
 
--- Combat helper
--- Knockback is applied by setting target root velocity away from the impact
+--// Combat helper
+-- Centralizing knockback avoids each ability implementing it differently, which keeps the "feel" consistent.
+-- We compute a horizontal direction away from the impact origin so hits push targets outward, then add a small lift.
 local function applyKnockbackToHumanoid(humanoid: Humanoid, fromPosition: Vector3, strength: number)
 	local character = humanoid.Parent
 	if not character or not character:IsA("Model") then
@@ -177,8 +205,9 @@ local function applyKnockbackToHumanoid(humanoid: Humanoid, fromPosition: Vector
 	)
 end
 
---Movement helper (DashStrike)
--- Uses LinearVelocity
+--// Movement helper (DashStrike)
+-- LinearVelocity is used because Humanoid movement often fights direct velocity assignment.
+-- The Attachment is reused so repeated dashes don’t create extra attachments on the character.
 local function dashWithLinearVelocity(root: BasePart, direction: Vector3, speed: number, duration: number)
 	if direction.Magnitude < 0.001 then
 		return
@@ -207,8 +236,9 @@ local function dashWithLinearVelocity(root: BasePart, direction: Vector3, speed:
 	end)
 end
 
---ThrowRock helpers (Bezier and anti-tunneling raycasts)
--- Quadratic Bezier gives a clean arc using only Vector3 math (no physics simulation NEEDED)
+--// ThrowRock helpers (Bezier + anti-tunneling raycasts)
+-- Bezier math gives a predictable arc (start -> control -> end). RunService.Heartbeat drives the animation
+-- so movement scales with real frame delta time. Raycasting each step prevents missing collisions at high speed.
 local function bezierQuadratic(p0: Vector3, p1: Vector3, p2: Vector3, t: number): Vector3
 	local a = p0:Lerp(p1, t)
 	local b = p1:Lerp(p2, t)
@@ -216,6 +246,7 @@ local function bezierQuadratic(p0: Vector3, p1: Vector3, p2: Vector3, t: number)
 end
 
 local function spawnRockBezier(ownerCharacter: Model, startPos: Vector3, direction: Vector3)
+	-- The rock is anchored so its path is fully controlled by our math; this avoids physics/network ownership differences.
 	local rock = Instance.new("Part")
 	rock.Name = "RockProjectile"
 	rock.Shape = Enum.PartType.Ball
@@ -242,19 +273,19 @@ local function spawnRockBezier(ownerCharacter: Model, startPos: Vector3, directi
 	local conn
 
 	conn = RunService.Heartbeat:Connect(function(dt: number)
+		-- Once a hit happens we immediately stop updating to avoid double-hits and wasted work.
 		if hit then
 			return
 		end
 
 		t += dt / ROCK_FLIGHT_TIME
-		if t >= 1 then
-			t = 1
+		if t >= 2 then
+			t = 2
 		end
 
 		local pos = bezierQuadratic(startPos, control, endPos, t)
 		local step = pos - lastPos
 
-		-- Raycast between frames so fast projectiles still register hits
 		if step.Magnitude > 0 then
 			local result = game.Workspace:Raycast(lastPos, step, rayParams)
 			if result then
@@ -276,22 +307,24 @@ local function spawnRockBezier(ownerCharacter: Model, startPos: Vector3, directi
 
 		rock.Position = pos
 
-		-- You can easily change this it orentates based on where your facing.
+		-- Cosmetic orientation: makes the projectile face its travel direction for readability in the demo.
 		if step.Magnitude > 0.001 then
 			rock.CFrame = CFrame.lookAt(pos, pos + step.Unit)
 		end
 
 		lastPos = pos
 
-		if t >= 1 then
+		-- When the curve finishes, disconnect + destroy so we don’t keep a Heartbeat connection alive.
+		if t >= 2 then
 			if conn then conn:Disconnect() end
 			if rock.Parent then rock:Destroy() end
 		end
 	end)
 end
 
--- Shockwave VFX helper
--- Spawns small debris chunks from the ground material/color and pushes them outward.
+--// Shockwave VFX helper
+-- Debris is intentionally "one-shot" VFX: it doesn’t affect damage. This separation keeps gameplay consistent
+-- even if VFX is tuned later. Raycasting down finds the ground so debris matches the surface material/color.
 local function spawnShockwaveDebris(origin: Vector3, ignore: {Instance})
 	local params = RaycastParams.new()
 	params.FilterType = Enum.RaycastFilterType.Exclude
@@ -325,7 +358,7 @@ local function spawnShockwaveDebris(origin: Vector3, ignore: {Instance})
 		rock.CanQuery = false
 		rock.CanTouch = false
 		rock.Anchored = false
-		
+
 		if hitPart:IsA("BasePart") then
 			rock.Material = hitPart.Material
 			rock.Color = hitPart.Color
@@ -333,6 +366,7 @@ local function spawnShockwaveDebris(origin: Vector3, ignore: {Instance})
 			rock.Material = Enum.Material.Slate
 			rock.Color = Color3.fromRGB(120, 120, 120)
 		end
+
 		rock.CFrame = CFrame.lookAt(hitPos + hitNormal * (size * 0.5), hitPos + hitNormal) * CFrame.Angles(
 			math.rad(math.random(0, 360)),
 			math.rad(math.random(0, 360)),
@@ -362,19 +396,21 @@ local function spawnShockwaveDebris(origin: Vector3, ignore: {Instance})
 			end
 		end)
 
-		-- debris service cleans up temporary vfx parts automatically
 		Debris:AddItem(rock, DEBRIS_LIFETIME)
 	end
 end
 
 function AbilityController.tryCast(self: AbilityControllerT, abilityName: string)
+	-- tryCast is the single "router" for all abilities. It enforces shared rules:
+	-- - ability must exist in ABILITIES
+	-- - ability must not be on cooldown
+	-- Then it runs exactly one ability branch and starts the cooldown.
 	local def = ABILITIES[abilityName]
 	if def == nil then
 		warn(("Unknown '%s' from %s"):format(abilityName, self.player.Name))
 		return
 	end
 
-	-- Cooldown check serverside
 	if AbilityController.isOnCooldown(self, abilityName) then
 		return
 	end
@@ -462,14 +498,15 @@ function AbilityController.tryCast(self: AbilityControllerT, abilityName: string
 			+ (dir * ROCK_SPAWN_FORWARD_OFFSET)
 			+ Vector3.new(0, ROCK_SPAWN_UP_OFFSET, 0)
 
+		-- This ability delegates to spawnRockBezier so projectile logic stays isolated from the router.
 		spawnRockBezier(character, spawnPos, dir)
 	end
 
 	AbilityController.startCooldown(self, abilityName, def.cooldown)
 end
 
--- Controllers storage
--- Stored by Player so we can keep per player state 
+--// Controllers storage
+-- Controllers are stored by Player so we can safely remove them on PlayerRemoving and avoid stale references.
 local controllers: {[Player]: AbilityControllerT} = {}
 
 local function getController(player: Player): AbilityControllerT
@@ -482,11 +519,12 @@ local function getController(player: Player): AbilityControllerT
 end
 
 Players.PlayerRemoving:Connect(function(player: Player)
-	-- I use the event to clean up memory leaks
+	-- Cleanup prevents the controllers table from growing forever across sessions.
 	controllers[player] = nil
 end)
 
 abilityRequest.OnServerEvent:Connect(function(player: Player, abilityName: any)
+	-- Remote input is untrusted. Validating types early prevents bad indexing and makes exploit attempts harmless.
 	if typeof(abilityName) ~= "string" then
 		return
 	end
