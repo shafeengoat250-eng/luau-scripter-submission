@@ -105,7 +105,7 @@ export type AbilityControllerT = AbilityControllerData & { -- full public type, 
 function AbilityController.new(player: Player): AbilityControllerT -- constructor for a player controller
 	local self: AbilityControllerData = { -- create data table
 		player = player, -- store owner
-		onCooldown = {}, -- init empty cooldown map
+		onCooldown = {},
 	}
 
 	return setmetatable(self:: any, AbilityController) :: any -- attach methods via metatable and return
