@@ -49,12 +49,12 @@ local ABILITIES = {
 -- DashStrike config
 -- A short forward dash followed by a single hitbox check in front of the player
 
-local DASH_DISTANCE = 12 -- How far the dash should travel bigger number = longer dash.
+local DASH_DISTANCE = 12
 local DASH_TIME = 0.12 -- How long the dash lasts , Smaller time = faster dash (because speed = distance / time) (Basic physics btw)
 local HITBOX_SIZE = Vector3.new(15, 15, 15)-- Size of the damage box, uses vector3 instead of vector 2 because we are editing a 3d space
-local HITBOX_FORWARD_OFFSET = 5 -- Moves the hitbox forward from the player's root 
+local HITBOX_FORWARD_OFFSET = 5
 local DAMAGE = 20
-local KNOCKBACK = 250 -- how strongly targets are pushed away when hit (higher = launched farther/faster).
+local KNOCKBACK = 250 -- how strongly targets are pushed away when hit (higher = launched farther/faster)
 -- Shockwave config
 -- A shockwave effect that damages nearby humanoids and spawns outward moving debris for visual impact
 local SHOCKWAVE_RADIUS = 14
@@ -164,20 +164,20 @@ end
 --  Unique humanoids-- characters have multiple parts, avoid dealing damage multiple times.
 
 local function getTargetsInBox(boxCFrame: CFrame, boxSize: Vector3, ignoreInstances: {Instance}): {Humanoid} -- finds humanoids inside a box region
-	local params = OverlapParams.new() -- config for overlap filtering
+	local params = OverlapParams.new() -- Config for overlap filtering
 	params.FilterType = Enum.RaycastFilterType.Exclude -- ignore listed instances
 	params.FilterDescendantsInstances = ignoreInstances -- typically the caster/ignored models
 
 	local parts = workspace:GetPartBoundsInBox(boxCFrame, boxSize, params) -- all parts overlapping the box
 
 	local seen: {[Humanoid]: boolean} = {} -- dont dupe humanoids because its a multi rig parts
-	local targets: {Humanoid} = {} -- output list of unique humanoids
+	local targets: {Humanoid} = {} -- Output list of unique humanoids
 
 	for _, part in ipairs(parts) do -- scan every overlapping part
 		local model = part:FindFirstAncestorOfClass("Model") -- get the character/model that owns the part
 		if model then -- ensure that I found a model
 			local humanoid = model:FindFirstChildOfClass("Humanoid") -- find humanoid on that model
-			if humanoid and humanoid.Health > 0 and not seen[humanoid] then -- alive and not already counted
+			if humanoid and humanoid.Health > 0 and not seen[humanoid] then -- Alive and not already counted
 				seen[humanoid] = true -- mark as counted
 				table.insert(targets, humanoid) -- add to results
 			end
@@ -201,21 +201,21 @@ local function applyKnockbackToHumanoid(humanoid: Humanoid, fromPosition: Vector
 	end
 
 	local root = getRoot(character) -- get hrp
-	if not root then -- must have a root to push
+	if not root then -- Must have a root to push
 		return -- no valid root found
 	end
 
 	local delta = root.Position - fromPosition -- vector away from the hit origin
 	local horizontal = Vector3.new(delta.X, 0, delta.Z) -- remove vertical so push is mostly sideways
 
-	if horizontal.Magnitude < 0.001 then -- avoid zero length direction
+	if horizontal.Magnitude < 0.001 then -- Avoid zero length direction
 		horizontal = Vector3.new(0, 0, -1) -- fallback direction
 	end
 
 	root.AssemblyLinearVelocity = Vector3.new( -- set velocity instantly 
 		horizontal.Unit.X * strength, -- x push component
 		root.AssemblyLinearVelocity.Y + 12, -- keep current Y and small lift
-		horizontal.Unit.Z * strength -- z push component
+		horizontal.Unit.Z * strength -- Z push component
 	)
 end
 
@@ -233,7 +233,7 @@ local function dashWithLinearVelocity(root: BasePart, direction: Vector3, speed:
 	end
 
 	local att = root:FindFirstChild("DashAttachment") -- reuse an attachment if it already exists
-	if not att then -- create if missing
+	if not att then -- Create if missing
 		att = Instance.new("Attachment")
 		att.Name = "DashAttachment" 
 		att.Parent = root 
@@ -243,7 +243,7 @@ local function dashWithLinearVelocity(root: BasePart, direction: Vector3, speed:
 	lv.Name = "DashLinearVelocity"
 	lv.Attachment0 = att 
 	lv.RelativeTo = Enum.ActuatorRelativeTo.World -- velocity in world space
-	lv.MaxForce = math.huge -- ensure it overcomes character mass/forces
+	lv.MaxForce = math.huge -- Ensure it overcomes character mass/forces
 	lv.VectorVelocity = direction.Unit * speed 
 	lv.Parent = root 
 
@@ -290,7 +290,7 @@ local function spawnRockBezier(ownerCharacter: Model, startPos: Vector3, directi
 
 local t = 0 -- progress value 
 local lastPos = startPos -- previous position (used to raycast between frames)
-local hit = false -- flag to stop processing after a hit
+local hit = false -- Flag to stop processing after a hit
 local conn -- holds the Heartbeat connection so we can disconnect it
 
 conn = RunService.Heartbeat:Connect(function(dt: number) 
@@ -299,7 +299,7 @@ conn = RunService.Heartbeat:Connect(function(dt: number)
 	end
 
 	t += dt / ROCK_FLIGHT_TIME -- advance progress based on total flight time
-	if t >= 2 then -- clamp progress so it doesn't run forever
+	if t >= 2 then -- Clamp progress so it doesn't run forever
 		t = 2 -- cap value
 	end
 
