@@ -166,7 +166,7 @@ end
 local function getTargetsInBox(boxCFrame: CFrame, boxSize: Vector3, ignoreInstances: {Instance}): {Humanoid} -- finds humanoids inside a box region
 	local params = OverlapParams.new() -- Config for overlap filtering
 	params.FilterType = Enum.RaycastFilterType.Exclude -- ignore listed instances
-	params.FilterDescendantsInstances = ignoreInstances -- typically the caster/ignored models
+	params.FilterDescendantsInstances = ignoreInstances
 
 	local parts = workspace:GetPartBoundsInBox(boxCFrame, boxSize, params) -- all parts overlapping the box
 
