@@ -20,7 +20,7 @@ ThrowRock- an anchored projectile that travels along a quadratic Bezier arc. Ray
 --How to play, Q to dashstrike // E to shockwave // R to throw
  
 -- Services
-local Players = game:GetService("Players") 
+local Players = game:GetService("Players") -- a service that gets all the player in the game
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -32,7 +32,7 @@ local remotesFolder = ReplicatedStorage.Remotes
 local abilityRequest =  remotesFolder.AbilityRequest:: RemoteEvent
 
 -- Ability definitions with their cooldowns
-local ABILITIES = {
+local ABILITIES = {-- ability table that holds three tables with their own variable that has a cooldown
 	DashStrike = {
 		cooldown = 1.5,
 	},
@@ -124,7 +124,7 @@ function AbilityController.startCooldown(self: AbilityControllerT, abilityName: 
 -- so the client can't force extra casts even if they fire the RemoteEvent rapidly (no spam)
 	self.onCooldown[abilityName] = true
 
-	task.spawn(function()
+	task.spawn(function() -- task.spawn is a thing in roblox that doesnt obey the roblox order of what code goes first
 		task.wait(cooldownSeconds)
 		self.onCooldown[abilityName] = false
 	end)
@@ -143,7 +143,7 @@ local function getCharacter(player: Player): Model -- grabs the player's charact
 end
 
 local function getHumanoid(character: Model): Humanoid -- finds the humanoid for health/damage checks
-	return character:FindFirstChildOfClass("Humanoid") -- standard rig component
+	return character:FindFirstChildOfClass("Humanoid") 
 end
 
 local function getRoot(character: Model): BasePart -- gets hrp for position, facing/movement
@@ -164,18 +164,18 @@ end
 --  Unique humanoids-- characters have multiple parts, avoid dealing damage multiple times.
 
 local function getTargetsInBox(boxCFrame: CFrame, boxSize: Vector3, ignoreInstances: {Instance}): {Humanoid} -- finds humanoids inside a box region
-	local params = OverlapParams.new() -- Config for overlap filtering
-	params.FilterType = Enum.RaycastFilterType.Exclude -- ignore listed instances
+	local params = OverlapParams.new() -- Create overlay config using overlapparams
+	params.FilterType = Enum.RaycastFilterType.Exclude -- ignore listed instances using .Exclude in raycastfiltertypes
 	params.FilterDescendantsInstances = ignoreInstances
 
-	local parts = workspace:GetPartBoundsInBox(boxCFrame, boxSize, params) -- all parts overlapping the box
+	local parts = workspace:GetPartBoundsInBox(boxCFrame, boxSize, params) -- all parts overlapping the box, getpartsboundinbox using position size and the parameters
 
-	local seen: {[Humanoid]: boolean} = {} -- dont dupe humanoids because its a multi rig parts
+	local seen: {[Humanoid]: boolean} = {} -- dont dupe humanoids because its a multi rig parts so set it equal to a table with nothing (nil
 	local targets: {Humanoid} = {} -- Output list of unique humanoids
 
 	for _, part in ipairs(parts) do 
-		local model = part:FindFirstAncestorOfClass("Model") 
-		if model then 
+		local model = part:FindFirstAncestorOfClass("Model") -- loops through what it hit then finds the parent basically
+		if model then -- checks if it was a model
 			local humanoid = model:FindFirstChildOfClass("Humanoid")
 			if humanoid and humanoid.Health > 0 and not seen[humanoid] then -- Alive and not already counted
 				seen[humanoid] = true 
@@ -208,7 +208,7 @@ local function applyKnockbackToHumanoid(humanoid: Humanoid, fromPosition: Vector
 	local delta = root.Position - fromPosition -- vector away from the hit origin
 	local horizontal = Vector3.new(delta.X, 0, delta.Z) -- remove vertical so push is mostly sideways
 
-	if horizontal.Magnitude < 0.001 then -- Avoid zero length direction
+	if horizontal.Magnitude < 0.001 then -- Avoid zero length direction. Magnitude is like the whole quantity of the thing
 		horizontal = Vector3.new(0, 0, -1) -- fallback direction
 	end
 
@@ -264,12 +264,13 @@ local function bezierQuadratic(p0: Vector3, p1: Vector3, p2: Vector3, t: number)
 	local a = p0:Lerp(p1, t) -- first lerp between start and control
 	local b = p1:Lerp(p2, t) -- second lerp between control and end
 	return a:Lerp(b, t) -- result is the the curve
+	--lerp from my knowledge is similar to tweenservice but using lerp to constantly animate is better
 end
 
 
 local function spawnRockBezier(ownerCharacter: Model, startPos: Vector3, direction: Vector3)
-	local rock = Instance.new("Part")
-	rock.Name = "RockProjectile"
+	local rock = Instance.new("Part")-- creates a new instance in workspace
+	rock.Name = "RockProjectile" 
 	rock.Shape = Enum.PartType.Ball
 	rock.Size = ROCK_SIZE
 	rock.CanCollide = false
@@ -280,7 +281,7 @@ local function spawnRockBezier(ownerCharacter: Model, startPos: Vector3, directi
 	rock.Position = startPos
 	rock.Parent = workspace
 
-	local dir = direction.Unit
+	local dir = direction.Unit -- this is how you get the unit vector
 	local endPos = startPos + (dir * ROCK_RANGE)
 	local control = (startPos + endPos) * 0.5 + Vector3.new(0, ROCK_ARC_HEIGHT, 0)
 
@@ -311,7 +312,7 @@ conn = RunService.Heartbeat:Connect(function(dt: number)
 		local result = game.Workspace:Raycast(lastPos, step, rayParams)
 		if result then -- something was hit
 			local model = result.Instance:FindFirstAncestorOfClass("Model") 
-			if model then -- valid model found
+			if model then -- correct model found
 				local humanoid = model:FindFirstChildOfClass("Humanoid") 
 				if humanoid and humanoid.Health > 0 then 
 					hit = true 
@@ -320,7 +321,7 @@ conn = RunService.Heartbeat:Connect(function(dt: number)
 				end
 			end
 
-			if conn then conn:Disconnect() end -- stop heartbeat updates prevents connection from leaking
+			if conn then conn:Disconnect() end -- stop heartbeat updates prevents connection from leaking. :Disconnect() only applies to event connections
 			if rock.Parent then rock:Destroy() end -- remove projectile part
 			return -- exit after handling the collision
 		end
@@ -357,7 +358,7 @@ local function spawnShockwaveDebris(origin: Vector3, ignore: {Instance}) -- spaw
 	for i = 1, DEBRIS_COUNT do -- spawn multiple chunks for the ring effect
 		local angle = (i / DEBRIS_COUNT) * math.pi * 2 -- evenly distribute angles around a circle using pi 
 		local ringOffset = Vector3.new(math.cos(angle), 0, math.sin(angle)) * DEBRIS_RADIUS
-		local randomOffset = Vector3.new( -- small randomness so it looks natural
+		local randomOffset = Vector3.new( -- small randomness 
 			(math.random() - 0.5) * 2, -- random X offset
 			0, -- keep flat 
 			(math.random() - 0.5) * 2 -- random Z offset
