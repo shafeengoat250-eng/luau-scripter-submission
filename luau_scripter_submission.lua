@@ -270,15 +270,15 @@ end
 
 local function spawnRockBezier(ownerCharacter: Model, startPos: Vector3, direction: Vector3)
 	local rock = Instance.new("Part")-- creates a new instance in workspace
-	rock.Name = "RockProjectile" -- property name
-	rock.Shape = Enum.PartType.Ball -- property shape
-	rock.Size = ROCK_SIZE -- property size
-	rock.CanCollide = false -- property cancollide - no collisions
-	rock.Anchored = true -- property anchored
-	rock.CanQuery = true -- property canquery
-	rock.CanTouch = false -- property cantouch 
-	rock.Material = Enum.Material.Slate -- property material
-	rock.Position = startPos -- property pos
+	rock.Name = "RockProjectile" -- property name from the rock
+	rock.Shape = Enum.PartType.Ball -- property shape changes the type of shape
+	rock.Size = ROCK_SIZE -- property size changes size using a vector3 
+	rock.CanCollide = false -- property cancollide - no collisions means that you go through the part
+	rock.Anchored = true -- property anchored not affected by gravity
+	rock.CanQuery = true -- property canquery (detection from raycast is true)
+	rock.CanTouch = false -- property cantouch (makes the event of touchevent not true
+	rock.Material = Enum.Material.Slate -- property material (built in material property using enum
+	rock.Position = startPos -- property pos using vector3
 	rock.Parent = workspace -- set a parent
 
 	local dir = direction.Unit -- this is how you get the unit vector
@@ -357,7 +357,7 @@ local function spawnShockwaveDebris(origin: Vector3, ignore: {Instance}) -- spaw
 
 	for i = 1, DEBRIS_COUNT do -- spawn multiple chunks for the ring effect
 		local angle = (i / DEBRIS_COUNT) * math.pi * 2 -- evenly distribute angles around a circle using pi 
-		local ringOffset = Vector3.new(math.cos(angle), 0, math.sin(angle)) * DEBRIS_RADIUS
+		local ringOffset = Vector3.new(math.cos(angle), 0, math.sin(angle)) * DEBRIS_RADIUS --from trig since cosine is x its setting the radius to 1 from the angle, and since y is sin it does the same for setting radius from the y axis, given the offset thats your multiplier
 		local randomOffset = Vector3.new( -- small randomness 
 			(math.random() - 0.5) * 2, -- random X offset
 			0, -- keep flat 
