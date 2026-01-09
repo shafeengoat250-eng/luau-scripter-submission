@@ -177,7 +177,7 @@ local function getTargetsInBox(boxCFrame: CFrame, boxSize: Vector3, ignoreInstan
 		local model = part:FindFirstAncestorOfClass("Model") -- loops through what it hit then finds the parent basically
 		if model then -- checks if it was a model
 			local humanoid = model:FindFirstChildOfClass("Humanoid")
-			if humanoid and humanoid.Health > 0 and not seen[humanoid] then -- Alive and not already counted
+			if humanoid and humanoid.Health > 0 and not seen[humanoid] then -- conditional check to see if the humanoid is alive
 				seen[humanoid] = true 
 				table.insert(targets, humanoid) -- add to results
 			end
@@ -264,22 +264,22 @@ local function bezierQuadratic(p0: Vector3, p1: Vector3, p2: Vector3, t: number)
 	local a = p0:Lerp(p1, t) -- first lerp between start and control
 	local b = p1:Lerp(p2, t) -- second lerp between control and end
 	return a:Lerp(b, t) -- result is the the curve
-	--lerp from my knowledge is similar to tweenservice but using lerp to constantly animate is better
+	--lerp is similar to tweenservice but using lerp to constantly animate is better
 end
 
 
 local function spawnRockBezier(ownerCharacter: Model, startPos: Vector3, direction: Vector3)
 	local rock = Instance.new("Part")-- creates a new instance in workspace
-	rock.Name = "RockProjectile" 
-	rock.Shape = Enum.PartType.Ball
-	rock.Size = ROCK_SIZE
-	rock.CanCollide = false
-	rock.Anchored = true
-	rock.CanQuery = true
-	rock.CanTouch = false
-	rock.Material = Enum.Material.Slate
-	rock.Position = startPos
-	rock.Parent = workspace
+	rock.Name = "RockProjectile" -- property name
+	rock.Shape = Enum.PartType.Ball -- property shape
+	rock.Size = ROCK_SIZE -- property size
+	rock.CanCollide = false -- property cancollide - no collisions
+	rock.Anchored = true -- property anchored
+	rock.CanQuery = true -- property canquery
+	rock.CanTouch = false -- property cantouch 
+	rock.Material = Enum.Material.Slate -- property material
+	rock.Position = startPos -- property pos
+	rock.Parent = workspace -- set a parent
 
 	local dir = direction.Unit -- this is how you get the unit vector
 	local endPos = startPos + (dir * ROCK_RANGE)
@@ -289,7 +289,7 @@ local function spawnRockBezier(ownerCharacter: Model, startPos: Vector3, directi
 	rayParams.FilterType = Enum.RaycastFilterType.Exclude
 	rayParams.FilterDescendantsInstances = {ownerCharacter, rock }
 
-local t = 0 -- progress value 
+local t = 0 -- progress value, store it using a variable thats set equal to 0
 local lastPos = startPos -- previous position used to raycast between frames
 local hit = false -- Flag to stop processing after a hit
 local conn -- holds the Heartbeat connection so we can disconnect it
@@ -310,7 +310,7 @@ conn = RunService.Heartbeat:Connect(function(dt: number)
 	-- Raycast between frames so fast projectiles still register hits
 	if step.Magnitude > 0 then -- only raycast if we actually moved
 		local result = game.Workspace:Raycast(lastPos, step, rayParams)
-		if result then -- something was hit
+		if result then -- if something was hit
 			local model = result.Instance:FindFirstAncestorOfClass("Model") 
 			if model then -- correct model found
 				local humanoid = model:FindFirstChildOfClass("Humanoid") 
@@ -351,7 +351,7 @@ end
 -- Pushing the chunks outward/upward visually matches the shockwave expanding idea and Debris cleanup prevents leaks
 
 local function spawnShockwaveDebris(origin: Vector3, ignore: {Instance}) -- spawns visual debris around the shockwave center
-	local params = RaycastParams.new() -- raycast settings for sampling the ground
+	local params = RaycastParams.new() -- raycast settings for sampling the ground (doing this to ignore in raycastparams)
 	params.FilterType = Enum.RaycastFilterType.Exclude -- ignore listed instances
 	params.FilterDescendantsInstances = ignore -- usually the caster so we don't sample their parts
 
@@ -394,7 +394,7 @@ local function spawnShockwaveDebris(origin: Vector3, ignore: {Instance}) -- spaw
 		
 rock.CFrame = CFrame.lookAt(hitPos + hitNormal * (size * 0.5), hitPos + hitNormal) * CFrame.Angles( -- place chunk on surface and face along the surface normal, then add random rotation
 			
-math.rad(math.random(0, 360)), -- Random X rotation 
+math.rad(math.random(0, 360)), -- Random X rotation -math.random is a function of math. that takes in a range
 math.rad(math.random(0, 360)), -- random Y rotation 
 math.rad(math.random(0, 360)) -- Random Z rotation 
 )
@@ -457,7 +457,7 @@ function AbilityController.tryCast(self: AbilityControllerT, abilityName: string
 	end
 
 	local forward = root.CFrame.LookVector -- dash direction is where player faces
-	dashWithLinearVelocity(root, forward, DASH_DISTANCE / DASH_TIME, DASH_TIME) -- move forward with controlled speed/time
+	dashWithLinearVelocity(root, forward, DASH_DISTANCE / DASH_TIME, DASH_TIME) -- applying the anwsers to the parameters of dash function to run it
 
 	task.spawn(function() 
 		task.wait(0.05) 
