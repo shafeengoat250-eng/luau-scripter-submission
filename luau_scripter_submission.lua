@@ -357,7 +357,8 @@ local function spawnShockwaveDebris(origin: Vector3, ignore: {Instance}) -- spaw
 
 	for i = 1, DEBRIS_COUNT do -- spawn multiple chunks for the ring effect
 		local angle = (i / DEBRIS_COUNT) * math.pi * 2 -- evenly distribute angles around a circle using pi 
-		local ringOffset = Vector3.new(math.cos(angle), 0, math.sin(angle)) * DEBRIS_RADIUS --from trig since cosine is x its setting the radius to 1 from the angle, and since y is sin it does the same for setting radius from the y axis, given the offset thats your multiplier
+		local ringOffset = Vector3.new(math.cos(angle), 0, math.sin(angle)) * DEBRIS_RADIUS --from trig cosine is x and sin is y. The radius is 1 from any given angle from the loop.
+		--The multiplier makes it so that the radius can be multiplied higher or lower
 		local randomOffset = Vector3.new( -- small randomness 
 			(math.random() - 0.5) * 2, -- random X offset
 			0, -- keep flat 
