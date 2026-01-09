@@ -407,11 +407,11 @@ end
 local att = Instance.new("Attachment") -- attachment needed to drive LinearVelocity
 att.Parent = rock -- attach to debris part
 
-local lv = Instance.new("LinearVelocity") -- short impulse-style motion controller
+local lv = Instance.new("LinearVelocity") 
 lv.Attachment0 = att -- where velocity is applied
 lv.RelativeTo = Enum.ActuatorRelativeTo.World -- move in world space
 lv.MaxForce = math.huge -- Ensure it actually moves the chunk
-lv.VectorVelocity = outward.Unit * DEBRIS_OUT_SPEED + Vector3.new(0, DEBRIS_UP_SPEED, 0) -- outward blast + upward lift
+lv.VectorVelocity = outward.Unit * DEBRIS_OUT_SPEED + Vector3.new(0, DEBRIS_UP_SPEED, 0) -- outward blast and upward lift
 lv.Parent = rock -- enable the constraint
 
 task.spawn(function() -- timed cleanup for the velocity controller
