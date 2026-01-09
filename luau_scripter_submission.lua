@@ -50,11 +50,11 @@ local ABILITIES = {
 -- A short forward dash followed by a single hitbox check in front of the player
 
 local DASH_DISTANCE = 12
-local DASH_TIME = 0.12 -- How long the dash lasts , Smaller time = faster dash (because speed = distance / time) (Basic physics btw)
+local DASH_TIME = 0.12 -- How long the dash lasts , Smaller time = faster dash because speed = distance divided time
 local HITBOX_SIZE = Vector3.new(15, 15, 15)-- Size of the damage box, uses vector3 instead of vector 2 because we are editing a 3d space
 local HITBOX_FORWARD_OFFSET = 5
 local DAMAGE = 20
-local KNOCKBACK = 250 -- how strongly targets are pushed away when hit (higher = launched farther/faster)
+local KNOCKBACK = 250 
 -- Shockwave config
 -- A shockwave effect that damages nearby humanoids and spawns outward moving debris for visual impact
 local SHOCKWAVE_RADIUS = 14
@@ -108,7 +108,7 @@ function AbilityController.new(player: Player): AbilityControllerT -- constructo
 		onCooldown = {},
 	}
 
-	return setmetatable(self:: any, AbilityController) :: any -- attach methods via metatable and return
+	return setmetatable(self:: any, AbilityController) :: any -- attach methods with metatable and return
 end
 
 function AbilityController.isOnCooldown(self: AbilityControllerT, abilityName: string): boolean -- cooldown query helper
@@ -131,10 +131,10 @@ function AbilityController.startCooldown(self: AbilityControllerT, abilityName: 
 end
 
 -- Character helpers
--- I wrap common character lookups (Character / Humanoid / HumanoidRootPart) into helpers because:
---  Readability- the ability code stays focused on what the ability is doing then repeated checks
--- Safe- characters can be nil missing parts during respawn, death etc
---  Consistency- every ability confirms the same required pieces (alive humanoid and root) before doing movement/damage.
+-- I wrap common character lookups into helpers because:
+--  the ability code stays focused on what the ability is doing then repeated checks
+-- characters can be nil missing parts during respawn, death etc
+--   every ability confirms the same required pieces (alive humanoid and root) before doing movement/damage.
 --  Less repeated work you only DO FindFirstChild/FindFirstChildOfClass calls once per cast,
 --    instead of PUTTING them everywhere in each ability section.
 
@@ -175,7 +175,7 @@ local function getTargetsInBox(boxCFrame: CFrame, boxSize: Vector3, ignoreInstan
 
 	for _, part in ipairs(parts) do -- scan every overlapping part
 		local model = part:FindFirstAncestorOfClass("Model") -- get the character/model that owns the part
-		if model then -- ensure that I found a model
+		if model then 
 			local humanoid = model:FindFirstChildOfClass("Humanoid") -- find humanoid on that model
 			if humanoid and humanoid.Health > 0 and not seen[humanoid] then -- Alive and not already counted
 				seen[humanoid] = true -- mark as counted
