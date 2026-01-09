@@ -21,9 +21,9 @@ ThrowRock- an anchored projectile that travels along a quadratic Bezier arc. Ray
  
 -- Services
 local Players = game:GetService("Players") 
--- We need Players to identify who fired the RemoteEvent and clean up their controller/state when they leave
+
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
--- I need ReplicatedStorage because the RemoteEvent is located there so both client and server can reference the same object
+
 local RunService = game:GetService("RunService")-- i need RunService for Heartbeat, which lets the server update the rock projectile every frame (time based movement)
 
 local Debris = game:GetService("Debris")-- We need Debris to automatically remove temporary vfx parts 
@@ -103,8 +103,8 @@ export type AbilityControllerT = AbilityControllerData & { -- full public type, 
 }
 
 function AbilityController.new(player: Player): AbilityControllerT -- constructor for a player controller
-	local self: AbilityControllerData = { -- create data table
-		player = player, -- store owner
+	local self: AbilityControllerData = { 
+		player = player,
 		onCooldown = {},
 	}
 
@@ -173,12 +173,12 @@ local function getTargetsInBox(boxCFrame: CFrame, boxSize: Vector3, ignoreInstan
 	local seen: {[Humanoid]: boolean} = {} -- dont dupe humanoids because its a multi rig parts
 	local targets: {Humanoid} = {} -- Output list of unique humanoids
 
-	for _, part in ipairs(parts) do -- scan every overlapping part
-		local model = part:FindFirstAncestorOfClass("Model") -- get the character/model that owns the part
+	for _, part in ipairs(parts) do 
+		local model = part:FindFirstAncestorOfClass("Model") 
 		if model then 
-			local humanoid = model:FindFirstChildOfClass("Humanoid") -- find humanoid on that model
+			local humanoid = model:FindFirstChildOfClass("Humanoid")
 			if humanoid and humanoid.Health > 0 and not seen[humanoid] then -- Alive and not already counted
-				seen[humanoid] = true -- mark as counted
+				seen[humanoid] = true 
 				table.insert(targets, humanoid) -- add to results
 			end
 		end
@@ -213,9 +213,9 @@ local function applyKnockbackToHumanoid(humanoid: Humanoid, fromPosition: Vector
 	end
 
 	root.AssemblyLinearVelocity = Vector3.new( -- set velocity instantly 
-		horizontal.Unit.X * strength, -- x push component
+		horizontal.Unit.X * strength,
 		root.AssemblyLinearVelocity.Y + 12, -- keep current Y and small lift
-		horizontal.Unit.Z * strength -- Z push component
+		horizontal.Unit.Z * strength 
 	)
 end
 
@@ -289,7 +289,7 @@ local function spawnRockBezier(ownerCharacter: Model, startPos: Vector3, directi
 	rayParams.FilterDescendantsInstances = {ownerCharacter, rock }
 
 local t = 0 -- progress value 
-local lastPos = startPos -- previous position (used to raycast between frames)
+local lastPos = startPos -- previous position used to raycast between frames
 local hit = false -- Flag to stop processing after a hit
 local conn -- holds the Heartbeat connection so we can disconnect it
 
@@ -343,7 +343,7 @@ conn = RunService.Heartbeat:Connect(function(dt: number)
 	end)
 end
 
--- Shockwave VFX helper
+-- Shockwave Vfx helper
 -- Spawns small debris chunks sampled from the ground material/color and pushes them outward.
 -- Shockwave debris is looks only
 -- Sampling the ground’s material/color makes the effect blend with whatever surface you’re on (stone, grass, sand, etc)
