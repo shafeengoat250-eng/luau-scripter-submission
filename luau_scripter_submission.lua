@@ -239,7 +239,7 @@ local function dashWithLinearVelocity(root: BasePart, direction: Vector3, speed:
 		att.Parent = root 
 	end
 
-	local lv = Instance.new("LinearVelocity") -- constraint that drives constant velocity
+	local lv = Instance.new("LinearVelocity") -- constraint that makes constant velocity
 	lv.Name = "DashLinearVelocity"
 	lv.Attachment0 = att 
 	lv.RelativeTo = Enum.ActuatorRelativeTo.World -- velocity in world space
